@@ -1,5 +1,8 @@
 /* Header */
 .header {
+  top: 0;
+  left: 0;
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -7,6 +10,7 @@
   backdrop-filter: blur(10px);
   background: rgba(0, 0, 0, 0.1);
   border-bottom: 1px solid rgba(160, 120, 255, 0.1);
+  z-index: 10;
 }
 
 .logo-container {

@@ -1,5 +1,8 @@
 /* Footer */
 .footer {
+    bottom: 0;
+    left: 0;
+    width: 100%;
     padding: 2rem 5%;
     display: flex;
     justify-content: space-between;
@@ -7,6 +10,7 @@
     border-top: 1px solid rgba(160, 120, 255, 0.1);
     backdrop-filter: blur(10px);
     background: rgba(0, 0, 0, 0.1);
+    z-index: 10;
 }
 
 .theme-toggle {
