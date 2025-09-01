@@ -9,6 +9,11 @@
   border-bottom: 1px solid rgba(160, 120, 255, 0.1);
 }
 
+a{
+  text-decoration: none; 
+  color: inherit;
+}
+
 .logo-container {
   cursor: pointer;
   transition: transform 0.3s ease;
@@ -16,6 +21,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  text-align: center;
 }
 
 .logo-container:hover {
