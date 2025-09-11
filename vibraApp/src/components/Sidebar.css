@@ -1,0 +1,70 @@
+.sideBarContainer{
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    height: 60px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-right: 1px solid rgb(60, 60, 60);
+    
+}
+.navLinks{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%; /* Agregar esto para que ocupe todo el ancho */
+}
+.navItem :first-child{
+    font-size: 20px;
+}
+.navItem {
+    color: white;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+}
+
+.navItem:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+    color: #d06bff; /* azul suave */
+}
+
+.navItem:hover :first-child {
+    color: #d06bff;
+}
+.navItem p{
+    margin: 0px;
+}
+.sideBarContainer .account{
+    display: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 100%;
+    background-color: rgb(90, 65, 65);
+}
+
+@media (min-width:550px) {
+    .sideBarContainer{
+        top: 0;
+        height: 100%;
+        width: 60px;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding: 20px 0;
+    }
+    .navLinks{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+    }
+    .sideBarContainer .account {
+        display: block;
+        margin-top: auto; /* Empuja el account al final */
+        margin-bottom: 40px; /* Sin margen extra abajo */
+    }
+}
