@@ -1,3 +1,4 @@
+import "./MusicPlayer.css";
 
 export function MusicPlayer() {
     return(
@@ -14,9 +15,9 @@ export function MusicPlayer() {
             <nav className="musicPlayerCenterNav">
 
                 <div className="musicControlsContainer">
-                    <div className="controlButton">⏮️</div>
-                    <div className="controlButton">▶️</div>
-                    <div className="controlButton">⏭️</div>
+                    <div className="controlButton">⏮</div>
+                    <div className="controlButton">▶</div>
+                    <div className="controlButton">⏭</div>
                 </div>
 
                 <nav className="progressBarContainer">
