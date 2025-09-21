@@ -1,7 +1,7 @@
 export interface ResultProps {
 	id: number;
 	title: string;
-	description: string;
-	path: string; 
- img: string;
+	artist: string;
+	duration: string;
+	plays: string;
 }

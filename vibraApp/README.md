@@ -10,7 +10,7 @@ public/                     # Static assets like index.html and favicons
 │   ├── index.html
 │   └── favicon.ico
 src/
-├── assets/
+│   ├── assets/
 │   ├── images/
 │   ├── fonts/
 │   └── icons/
