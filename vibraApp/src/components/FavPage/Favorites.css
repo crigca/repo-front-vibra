@@ -291,7 +291,7 @@
   }
 
   .suggestionsGrid {
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    grid-template-columns: repeat(3, 1fr); /* 3 columnas */
     gap: 16px;
   }
 
@@ -333,7 +333,7 @@
   }
 
   .suggestionsGrid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(2, 1fr); /* 2 columnas */
     gap: 14px;
   }
 
@@ -380,7 +380,7 @@
   }
 
   .suggestionsGrid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    grid-template-columns: repeat(2, 1fr); /* 2 columnas */
     gap: 12px;
   }
 
@@ -436,7 +436,7 @@
   }
 
   .suggestionsGrid {
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    grid-template-columns: repeat(2, 1fr); /* 2 columnas */
     gap: 10px;
   }
 
