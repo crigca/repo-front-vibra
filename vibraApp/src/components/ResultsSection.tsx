@@ -3,34 +3,38 @@
  */
 
 /* Dependencies  */
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 
 /* types */
 import type {ResultProps} from "../types/resultProps";
 
+/* hooks */
+import SearchContext from "../hooks/searchContext";
+
+
 /* Components */
 
 /* styles */
+//props:{playTrack:any,dataRecive:ResultProps[]}
+const ResultsSection =() => {
 
-
-const ResultsSection =(props:{playTrack:any,dataRecive:ResultProps[]}) => {
-
+    const {toReproduce,dataFromSearch} = useContext(SearchContext);
     const vSt:string[]=["init","result","results","notFound"];
     const [state,setState]=useState(vSt[0]);
           
     useEffect(()=>{
         //console.log("Result",props.dataRecive,props.dataRecive.hasOwnProperty("id"));
         console.log("state: "+state);
-        if (props.dataRecive instanceof Array){
+        if (dataFromSearch instanceof Array){
           console.log("Array");
-          if(props.dataRecive.length === 0) {
+          if(dataFromSearch.length === 0 || dataFromSearch[0].id==="") {
             /*not found something */ 
             setState(vSt[3]);
           }else{
             /*at least some one */
             setState(vSt[2]);
           }
-        }else if (props.dataRecive.hasOwnProperty("id")){//object
+        }else if (dataFromSearch instanceof Object && dataFromSearch.hasOwnProperty("id") && dataFromSearch.id!=""){//object
             /*only one*/
            console.log("Object");
            setState(vSt[1]);
@@ -38,7 +42,14 @@ const ResultsSection =(props:{playTrack:any,dataRecive:ResultProps[]}) => {
            setState(vSt[3]);
         }
       }
-      ,[props.dataRecive]);// on mount and change
+      ,[dataFromSearch]);// on mount and change
+
+    const handleClickPlayTrack = (event:any) => {
+      event.preventDefault();
+      //console.log(event.target.parentElement.parentElement);
+      if (event.target.parentElement.parentElement.hasAttribute("data-track-id"))        
+        toReproduce({ id: event.target.parentElement.parentElement.getAttribute("data-track-id") });
+    };
 
     const displayResults= () => {
 
@@ -54,17 +65,18 @@ const ResultsSection =(props:{playTrack:any,dataRecive:ResultProps[]}) => {
             );
           break;
         case "result":
-            var data:ResultProps=props.dataRecive;
-            //console.log("result",props.dataRecive,data);
+            var data:ResultProps=dataFromSearch;
+            //console.log("result",dataFromSearch,data);
             return (
-              <div className="results-grid">
-                <div className="result-card" data-track-id="${data.id}">
+              <div id="" className="results-grid">
+                <div className="result-card" data-track-id={data.id}>
                   <div className="result-thumbnail">🎵</div>
                   <div className="result-info">
                     <h3 className="result-title">{data.title}</h3>
                     <p className="result-artist">{data.artist}</p>
                     <p className="result-duration">{data.duration}</p>
-                    <button className="play-btn" onClick={props.playTrack(data.id,data.title,data.artist)}>
+                    <button className="play-btn" onClick={handleClickPlayTrack}>
+                    {/* <button className="play-btn" onClick={props.playTrack(data.id,data.title,data.artist)}> */}
                       <span>▶️</span>
                       Reproducir con IA
                     </button>
@@ -76,15 +88,16 @@ const ResultsSection =(props:{playTrack:any,dataRecive:ResultProps[]}) => {
         case "results":
             return(
               <div className="results-grid">
-                { props.dataRecive.map(datum =>
-                    <div className="result-card" data-track-id={datum.id}>
+                { dataFromSearch.map((datum:ResultProps) =>
+                    <div key={datum.id} className="result-card" data-track-id={datum.id}>
                       <div className="result-thumbnail">🎵</div>
                       <div className="result-info">
                         <h3 className="result-title">{datum.title}</h3>
                         <p className="result-artist">{datum.artist}</p>
                         <p className="result-duration">{datum.duration}</p>
-                        <button className="play-btn" /* onClick={props.playTrack(datum.id, datum.title, datum.artist)} */>
+                        <button className="play-btn" onClick={handleClickPlayTrack}>
                         <span>▶️</span>Reproducir con IA</button>
+                        {/* <button className="play-btn" onClick={props.playTrack(data.id,data.title,data.artist)}> */}
                       </div>
                     </div>
                   ) }
@@ -103,7 +116,7 @@ const ResultsSection =(props:{playTrack:any,dataRecive:ResultProps[]}) => {
         default:
           break;
       }
-    }
+    };
 
     const Results=()=>{
       return displayResults();
@@ -121,3 +134,5 @@ const ResultsSection =(props:{playTrack:any,dataRecive:ResultProps[]}) => {
 }
 
 export default ResultsSection;
+
+

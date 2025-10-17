@@ -3,138 +3,82 @@
  */
 
 /* Dependencies  */
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+
 import ErrorBoundary from "./ErrorBoundary";
 
 /* types */
 import type {DynamicProps} from "../types/dynamicProps";
 import type {SearchProps} from "../types/searchProps";
-
 import type {SearchSectionProps} from "../types/searchSectionProps";
 
+/* hooks */
+import SearchContext from "../hooks/searchContext";
 
 /* Components */
-import ShowBox from "./showBox";
 
 /* styles */
 
-const SearchSection =(props:SearchSectionProps) => {
-  const [dataDynamic, setDataDynamic]:[DynamicProps[],any] = useState([]);
-  const [valueCurrent, setValueCurrent]:[string,any] = useState("");
-  const [objectCurrent, setObjectCurrent]:[SearchProps,any] = useState({id:0,
-                                                                        title:"",
-                                                                        artist:"",
-                                                                        album:"",
-                                                                        type:1 });
-  const [most, setMost]:[DynamicProps[],any] = useState([]);
-  const type:string[]=["artist","song","album"];
+// const SearchSection =(props:SearchSectionProps) => {
+const SearchSection =() => {
 
+  const {dataToSearch,toResoult} = useContext(SearchContext);
+  const [valueCurrent, setValueCurrent]:[string,any] = useState("");
+  const [trent, setTrent]:[DynamicProps[],any] = useState([]);
+  const URL="/data/data.json";
+  const ENTITY='/trent';
   useEffect(() => {
     
-    fetch('https://ade70352-2ece-43e0-b556-99be0ea93ac1.mock.pstmn.io/most')
+    fetch(URL)
       .then(response => response.json())
       .then(data => {
         console.log(data);
         //console.log(data.subjets);
-        setMost(data);
+        setTrent(data.trent);
         //console.log(subjets);
       })
       .catch(error => {
         console.log('Error fetching data:', error);
       });
+
   }, []);// on render
     //dataDynamicSearch={handleChildDynamicSearch}   
-    
-  const handleChildDynamicSearch = (key:string) => {
-    console.log("Dynamic Searchs");
-    //must be url/all/key
-    fetch('https://ee7fa148-ce19-471c-aa0c-928b90cdaf6d.mock.pstmn.io/'+key)
-      .then(response => response.json())
-      .then(data => {
-        if(data.hasOwnProperty("error"))
-          console.log('Name:'+data.error.name,'Message:' +data.error.message,'Header:'+data.error.header );
-        else
-          setDataDynamic(data);
-      })
-      .catch(error => {
-        console.log('Error fetching data:', error);
-      });       
-  };
 
   /* sendDataToParent */
   const handleSearchSubmit = (event:any) => {
     event.preventDefault();
-    let data:SearchProps={
-      id:0,
-      type:0,
-      title:"",
-      album:"",
-      artist:""
-    };
-    data.id=event.target["id"].value;
-    data.type=event.target["type"].value;
-    data.title=event.target["title"].value;
-    data.album=event.target["album"].value;
-    data.artist=event.target["artist"].value;
     //console.log(data);
     if(event.target["search"].value.length)
-      props.dataToSearch(data); //callback func(searchProp object)
+      dataToSearch({search:event.target["search"].value}); //callback func(searchProp object)
     setValueCurrent(event.target["search"].value);
   };
 
   /* auto complete and search */
   const handleInputChange = (event:any) => {
       event.preventDefault();
-      if(event.target.value.length)
-        handleChildDynamicSearch(event.target.value);
-      else
-        setDataDynamic("");
-      setValueCurrent(event.target.value);
+      setValueCurrent(event.target["search"].value);
   };
-  /* auto complete and search */
-  const handleChildSelectData = (event:any) => {
+
+  const handleClickSuggestion = (event:any) => {
     event.preventDefault();
-    let data:SearchProps={
-      type:event.target.value.split("-")[0],
-      id:event.target.value.split("-")[1],
-      title:"",
-      album:"",
-      artist:""
-    };
-    let value:string="";
-    let text:string=event.target.options[event.target.selectedIndex].text;
-    let sV:string[]=text.split(" - ");
-    switch (type[data.type]) {
-      case "artist":
-        data.artist=sV[0];
-        value= data.artist;
-        break;
-      case "song":
-        data.title=sV[0];
-        data.album=sV[1];
-        data.artist=sV[2];
-        value= data.title+" - "+data.album+" - "+data.artist;
-      break;
-      case "album":
-        data.album=sV[0];
-        data.artist=sV[1];
-        value=data.album+" - "+data.artist;
-      break;
-    }
-    setObjectCurrent(data);
-    setValueCurrent(text);
+    toResoult(JSON.parse(event.target.firstChild.value));
   };
-  
-  /* auto complete and search */
-  const renderSuggestion = (datum:DynamicProps) => {
-    return (<div className="suggestion-tag" onClick={props.dataToSearch({
-                                                                         id:datum.id,
-                                                                         type:1,
-                                                                         title:datum.title,
-                                                                         artist:datum.artist,
-                                                                         album:datum.album})}>
-            {datum.title}
-            </div>);
+
+/* auto complete and search */
+const renderSuggestion = (datum:DynamicProps) => {
+  if (datum.hasOwnProperty("id"))
+    return (<div  key={datum.id}
+                  id={datum.id}  
+                  className="suggestion-tag"
+                  onClick={handleClickSuggestion}>
+                  <input type="hidden" value={`{"id":"${datum.id}",
+                                              "title":"${datum.title}",
+                                              "artist":"${datum.artist}",
+                                              "duration":"${datum.duration}",
+                                              "plays":"${datum.plays}"}`}></input>
+                  {datum.title}
+              </div>
+         );
   };
 
   return (
@@ -147,11 +91,6 @@ const SearchSection =(props:SearchSectionProps) => {
 
           <div className="search-container">
               <form className="search-form" onSubmit={handleSearchSubmit}>
-                  <input type="hidden" value={objectCurrent.id}    name="id" disabled></input>
-                  <input type="hidden" value={objectCurrent.title} name="title" disabled></input>
-                  <input type="hidden" value={objectCurrent.artist}name="artist" disabled></input>
-                  <input type="hidden" value={objectCurrent.album} name="album" disabled></input>
-                  <input type="hidden" value={objectCurrent.type}  name="type" disabled></input>
                   <input 
                       type="text"
                       className="search-input" 
@@ -162,9 +101,7 @@ const SearchSection =(props:SearchSectionProps) => {
                       value={valueCurrent}
                       name="search"
                   > </input>
-                  <ErrorBoundary fallback={<p>Something went wrong</p>}  >
-                    <ShowBox dataShow={dataDynamic} dataSelect={handleChildSelectData}/>      
-                  </ErrorBoundary>
+                  
                   <button  type="submit" className="search-btn" id="searchBtn">
                     <span>🔍</span>
                     Buscar
@@ -172,7 +109,7 @@ const SearchSection =(props:SearchSectionProps) => {
               </form>
               
               <div className="search-suggestions">
-                {most.map(renderSuggestion)}                    
+                {trent.map(renderSuggestion)}                    
               </div>
           </div>
       </section>

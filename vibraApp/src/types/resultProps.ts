@@ -1,5 +1,5 @@
 export interface ResultProps {
-	id: number;
+	id: string;
 	title: string;
 	artist: string;
 	duration: string;

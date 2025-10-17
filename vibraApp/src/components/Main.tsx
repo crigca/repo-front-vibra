@@ -10,59 +10,61 @@ import SearchSection from "./SearchSection";
 import ResultsSection from "./ResultsSection";
 
 /* types */
-import type {ResultProps} from "../types/resultProps";
 import type {SearchProps} from "../types/searchProps";
-
+import type {ResultProps} from "../types/resultProps";
+import type {ReproduceProps} from "../types/reproduceProps";
 
 /* hooks */
-//import SearchContext from "../hooks/searchContext";
+import SearchContext from "../hooks/searchContext";
 /* styles */
 
 const Main =(props:{handlerPlayer:any}) => {
-  const type:string[]=["artist","song","album"];
-  const [dataFromSearch, setdataFromSearch]:[ResultProps[],any] = useState([]);
-    
-  const handleChildData = (key:SearchProps) => {
 
-    let uri="";
-    switch (type[key.type]) {
-      case "song":
-        uri="https://79a431a7-8114-461a-8a77-ebacab5d46a5.mock.pstmn.io/song:"+key.id;
-        break;
-      case "artist":
-        uri="https://79a431a7-8114-461a-8a77-ebacab5d46a5.mock.pstmn.io/artist:"+key.id;
-        break;
-      case "album":
-        uri="https://79a431a7-8114-461a-8a77-ebacab5d46a5.mock.pstmn.io/album:"+key.id;
-        break;  
-      default:
-        uri="https://ee7fa148-ce19-471c-aa0c-928b90cdaf6d.mock.pstmn.io/"+key.title;
-        break;
-    }
-    fetch(uri)
+  const dataToSearch_0=[{ id: "",
+                          title: "",
+                          artist: "",
+                          duration: "",
+                          plays: ""}];
+
+  const [dataFromSearch, setDataFromSearch]:[ResultProps[],any] = useState(dataToSearch_0);
+    
+  const dataToSearch = (key:SearchProps) => {
+
+    let uri="https://79a431a7-8114-461a-8a77-ebacab5d46a5.mock.pstmn.io";
+    
+    fetch(uri+"/songs/search?query"+key.search)
       .then(response => response.json())
       .then(data => {
         //console.log("main",data);
-        //setdataFromSearch(data.map(searchBy(data,key)));
+        //setDataFromSearch(data.map(searchBy(data,key)));
         if(data.hasOwnProperty("error")){
           console.log('Name:'+data.error.name,'Message:' +data.error.message,'Header:'+data.error.header );
-          setdataFromSearch({});
+          setDataFromSearch(dataToSearch_0);
         }else
-          setdataFromSearch(data);
+          setDataFromSearch(data);
       })
       .catch(error => {
         console.log('Error fetching data:', error);
       });
   };
 
+  const toResoult = (key:ResultProps) => {
+    setDataFromSearch(key);
+  };
+  const toReproduce = (key:ReproduceProps) => {
+    props.handlerPlayer(key);
+  };
   //console.log(dataFromSearch);
   return (
     <>      
       <main className="main-content">
-        {/* <SearchContext.provider value={subjets} > */}
-          <SearchSection  dataToSearch={handleChildData} />
-          <ResultsSection playTrack={props.handlerPlayer} dataRecive={dataFromSearch} />
-        {/* </SearchContext.provider> */}
+        <SearchContext.Provider value={{dataToSearch,// callback from search
+                                        toReproduce, // callback from Resoults
+                                        toResoult,   // callback from Search>most(suggestion)
+                                        dataFromSearch}} > {/* data to render Results */}
+          <SearchSection/>
+          <ResultsSection/>
+        </SearchContext.Provider>
 
       </main>
     </>

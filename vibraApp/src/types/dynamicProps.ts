@@ -1,7 +1,7 @@
 export interface DynamicProps {
-	id: number;
- type: number;
+	id: string;
 	title: string;
 	artist: string;
-	album: string;
+	duration: string;
+	plays: string;
 }
