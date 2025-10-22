@@ -11,6 +11,14 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+    --player-height: 100px;
+  --player-padding-x: 20px;
+  --player-gap: 16px;
+  --player-z: 50;
+  --sidebar-width-mobile: 0px;
+  --sidebar-width-desktop: 60px;
+  --alto-reproductor: 100px;
 }
 
 a {
@@ -28,6 +36,12 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background-color: black;
+  padding-bottom: var(--player-height);
+}
+
+html, body, #root {
+  height: 100%;
 }
 
 h1 {

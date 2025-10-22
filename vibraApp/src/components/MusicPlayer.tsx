@@ -9,370 +9,441 @@ declare global {
   }
 }
 
-const PLAYLIST: { id: string; title?: string; artist?: string }[] = [
-  { id: "iKI5q_hF0o0" },
-  { id: "Ulnobym-Ouo" },
-  { id: "N0Ovqd-epOI" },
-  { id: "eUlGF_8r5Ac" },
-  { id: "hXYCrTX-l24" },
-];
+/** ===================== CONFIG ===================== */
+const API_URL = "http://localhost:3000/music/songs?limit=25"; // <- ajustá el limit o pasalo por props/env
+const API_IMAGENES_URL = "http://localhost:3000/images?limit=25";
 
-/** Ajuste: activar o no el “warm-up” de los preloads (silenciado 1s y pausa) */
-const PRELOAD_WARM_PLAY = true;
+/** Utilidad para construir miniatura sin depender de oEmbed */
+const ytThumb = (id?: string) => (id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : "");
 
-/** Carga única de la YouTube IFrame API */
-function loadYouTubeAPI(): Promise<void> {
+/** Precarga de la API de YouTube */
+function cargarAPIYouTube(): Promise<void> {
   if (window.YT && window.YT.Player) return Promise.resolve();
-
   if (!window._ytApiLoadingPromise) {
-    window._ytApiLoadingPromise = new Promise<void>((resolve) => {
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      document.body.appendChild(tag);
-      window.onYouTubeIframeAPIReady = () => resolve();
+    window._ytApiLoadingPromise = new Promise<void>((resolver) => {
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      document.body.appendChild(script);
+      window.onYouTubeIframeAPIReady = () => resolver();
     });
   }
   return window._ytApiLoadingPromise!;
 }
 
-/** OEmbed para obtener title / author_name / thumbnail_url sin clave de API */
-async function fetchVideoInfo(videoId: string) {
-  const url = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("oEmbed error");
-    return await res.json(); // { title, author_name, thumbnail_url, ... }
-  } catch {
-    return {
-      title: "Unknown title",
-      author_name: "Unknown artist",
-      thumbnail_url: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
-    };
-  }
-}
-
-function formatTime(totalSeconds: number) {
-  const sec = Math.max(0, Math.floor(totalSeconds || 0));
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
+function formatearTiempo(segundosTotales: number) {
+  const seg = Math.max(0, Math.floor(segundosTotales || 0));
+  const h = Math.floor(seg / 3600);
+  const m = Math.floor((seg % 3600) / 60);
+  const s = seg % 60;
   const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
   const ss = String(s).padStart(2, "0");
   return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
 }
 
+/** Tipo de canción que devuelve tu API */
+export type Cancion = {
+  id: string;
+  title: string;
+  artist: string;
+  youtubeId: string;
+  duration?: number; // en segundos (opcional)
+  genre?: string;
+  viewCount?: string;
+  publishedAt?: string;
+  audioPath?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export function MusicPlayer() {
-  /** Player principal oculto */
-  const playerRef = useRef<any>(null);
-  const playerHostRef = useRef<HTMLDivElement | null>(null);
+  /** ======= refs & estado del player ======= */
+  const playerMainRef = useRef<any>(null);
+  const playerPreNextRef = useRef<any>(null);
+  const playerPrePrevRef = useRef<any>(null);
 
-  /** Players ocultos para PRELOAD de anterior/siguiente */
-  const preloadNextRef = useRef<any>(null);
-  const preloadPrevRef = useRef<any>(null);
-  const preloadNextHostRef = useRef<HTMLDivElement | null>(null);
-  const preloadPrevHostRef = useRef<HTMLDivElement | null>(null);
+  const hostMainRef = useRef<HTMLDivElement | null>(null);
+  const hostPreNextRef = useRef<HTMLDivElement | null>(null);
+  const hostPrePrevRef = useRef<HTMLDivElement | null>(null);
 
-  /** Estado de reproducción y metadatos */
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
+  const idIntervaloProgresoRef = useRef<number | null>(null);
 
-  /** Info visual (título / canal / miniatura) */
-  const [trackTitle, setTrackTitle] = useState("Cargando...");
-  const [trackAuthor, setTrackAuthor] = useState("");
-  const [trackThumb, setTrackThumb] = useState<string>("");
+  const [lista, setLista] = useState<Cancion[]>([]);
+  const [indiceActual, setIndiceActual] = useState(0);
 
-  /** Intervalo para el polling de progreso */
-  const pollIntervalRef = useRef<number | null>(null);
+  const [estaReproduciendo, setEstaReproduciendo] = useState(false);
+  const [duracion, setDuracion] = useState(0);
+  const [tiempoActual, setTiempoActual] = useState(0);
 
-  /** “Calienta” un player: cue + (opcional) play 1s en mute y pausa */
-  async function primePlayer(player: any, videoId: string, doWarmPlay = PRELOAD_WARM_PLAY) {
-    if (!player) return;
-    try {
-      player.mute?.();
-      player.cueVideoById?.(videoId);
-      if (doWarmPlay) {
-        try {
-          player.playVideo?.();
-          setTimeout(() => {
-            player.pauseVideo?.();
-          }, 1000);
-        } catch {
-          // si el navegador bloquea autoplay silenciado, igualmente queda cue'd
-        }
-      }
-    } catch {
-      // silencioso
-    }
-  }
+  const cancionActual = lista[indiceActual];
 
-  /** Cargar título/autor/miniatura */
-  const updateTrackInfo = async (id: string) => {
-    const info = await fetchVideoInfo(id);
-    setTrackTitle(info.title);
-    setTrackAuthor(info.author_name);
-    const fallback = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
-    setTrackThumb(info.thumbnail_url || fallback);
-  };
+  /** ======= metadatos visibles ======= */
+  const tituloPista = cancionActual?.title || "Cargando...";
+  const autorPista = cancionActual?.artist || "";
+  const miniaturaPista = ytThumb(cancionActual?.youtubeId);
 
-  /** Inicialización de players (principal + preloads) y polling */
+  /** ============== VISUALIZADOR (carga desde API) ============== */
+  const [mostrarVisualizador, setMostrarVisualizador] = useState(false);
+  const abrirVisualizador = () => setMostrarVisualizador(true);
+  const cerrarVisualizador = () => setMostrarVisualizador(false);
+
+  // Imágenes provenientes de la API de /images (usamos imageUrl)
+  const [imagenesVisualizador, setImagenesVisualizador] = useState<string[]>([]);
+
+  // Carga inicial de imágenes del visualizador
   useEffect(() => {
-    let destroyed = false;
+    let cancelado = false;
+    (async () => {
+      try {
+        const res = await fetch(API_IMAGENES_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        const urls: string[] = Array.isArray(json?.data)
+          ? json.data
+              .map((item: any) => item?.imageUrl)
+              .filter((u: unknown) => typeof u === "string" && !!u)
+          : [];
+        if (!cancelado) setImagenesVisualizador(urls);
+      } catch (err) {
+        console.error("Error cargando imágenes visualizador:", err);
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  // Precarga de imágenes en memoria para transiciones más suaves
+  const cacheImagenesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  useEffect(() => {
+    imagenesVisualizador.forEach((url) => {
+      if (!url) return;
+      if (cacheImagenesRef.current.has(url)) return;
+      const img = new Image();
+      img.decoding = "async";
+      img.loading = "eager";
+      img.src = url;
+      cacheImagenesRef.current.set(url, img);
+    });
+  }, [imagenesVisualizador]);
+
+  // Índices y animación del slide
+  const [indiceImagen, setIndiceImagen] = useState(0);
+  const indicePrevioRef = useRef(0);
+  const [animandoSlide, setAnimandoSlide] = useState(false);
+
+  // Avance automático cada 5s sólo cuando el visualizador está abierto y hay reproducción
+  useEffect(() => {
+    if (!mostrarVisualizador) return;
+    if (!estaReproduciendo) return;
+    if (imagenesVisualizador.length < 2) return;
+
+    const id = window.setInterval(() => {
+      setAnimandoSlide(true);
+      setIndiceImagen((idxAnterior) => {
+        indicePrevioRef.current = idxAnterior;
+        return (idxAnterior + 1) % imagenesVisualizador.length;
+      });
+      window.setTimeout(() => setAnimandoSlide(false), 450);
+    }, 5000);
+
+    return () => clearInterval(id);
+  }, [mostrarVisualizador, estaReproduciendo, imagenesVisualizador.length]);
+
+  // Reiniciar índice de imagen al cambiar de pista
+  useEffect(() => {
+    setIndiceImagen(0);
+    indicePrevioRef.current = 0;
+  }, [indiceActual]);
+
+  // ESC para cerrar overlay
+  useEffect(() => {
+    if (!mostrarVisualizador) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMostrarVisualizador(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mostrarVisualizador]);
+
+  /** ================== ciclo de vida ================== */
+  useEffect(() => {
+    let desmontado = false;
 
     (async () => {
-      await loadYouTubeAPI();
-      if (destroyed) return;
+      // 1) Levantamos lista desde tu API
+      const listaDesdeAPI = await cargarListaDesdeAPI();
+      if (desmontado) return;
+      setLista(listaDesdeAPI);
 
-      // Player principal
-      playerRef.current = new window.YT.Player(playerHostRef.current!, {
+      // 2) Cargamos API de YouTube y creamos players (main + preloads)
+      await cargarAPIYouTube();
+      if (desmontado) return;
+
+      // MAIN
+      playerMainRef.current = new window.YT.Player(hostMainRef.current!, {
         width: 0,
         height: 0,
-        videoId: PLAYLIST[currentIndex].id,
-        playerVars: {
-          controls: 0,
-          modestbranding: 1,
-          rel: 0,
-          fs: 0,
-          enablejsapi: 1,
-        },
+        videoId: listaDesdeAPI[0]?.youtubeId,
+        playerVars: { controls: 0, modestbranding: 1, rel: 0, fs: 0, enablejsapi: 1 },
         events: {
           onReady: (e: any) => {
-            const d = e.target.getDuration?.() || 0;
-            if (d) setDuration(d);
+            const d = e.target.getDuration?.() || listaDesdeAPI[0]?.duration || 0;
+            if (d) setDuracion(d);
           },
           onStateChange: (e: any) => {
-            const YTS = window.YT.PlayerState;
-            if (e.data === YTS.PLAYING) setIsPlaying(true);
-            if (e.data === YTS.PAUSED || e.data === YTS.ENDED) setIsPlaying(false);
-            if (e.data === YTS.ENDED) nextTrack(true);
+            const ESTADO = window.YT.PlayerState;
+            if (e.data === ESTADO.PLAYING) setEstaReproduciendo(true);
+            if (e.data === ESTADO.PAUSED || e.data === ESTADO.ENDED) setEstaReproduciendo(false);
+            if (e.data === ESTADO.ENDED) pistaSiguiente(true);
           },
         },
       });
 
-      // Preloads (prev/next), ocultos y silenciados
-      const prevIdx = (currentIndex - 1 + PLAYLIST.length) % PLAYLIST.length;
-      const nextIdx = (currentIndex + 1) % PLAYLIST.length;
-
-      preloadPrevRef.current = new window.YT.Player(preloadPrevHostRef.current!, {
+      // PRELOAD NEXT
+      playerPreNextRef.current = new window.YT.Player(hostPreNextRef.current!, {
         width: 0,
         height: 0,
-        videoId: PLAYLIST[prevIdx].id,
+        videoId: listaDesdeAPI[1]?.youtubeId || undefined,
         playerVars: { controls: 0, modestbranding: 1, rel: 0, fs: 0, enablejsapi: 1 },
-        events: { onReady: (e: any) => e.target.mute?.() },
+        events: {
+          onReady: () => {
+            // cue para cargar metadata sin reproducir
+            const nextId = listaDesdeAPI[1]?.youtubeId;
+            if (nextId) playerPreNextRef.current?.cueVideoById?.(nextId);
+          },
+        },
       });
 
-      preloadNextRef.current = new window.YT.Player(preloadNextHostRef.current!, {
+      // PRELOAD PREV
+      playerPrePrevRef.current = new window.YT.Player(hostPrePrevRef.current!, {
         width: 0,
         height: 0,
-        videoId: PLAYLIST[nextIdx].id,
+        videoId: listaDesdeAPI[listaDesdeAPI.length - 1]?.youtubeId || undefined,
         playerVars: { controls: 0, modestbranding: 1, rel: 0, fs: 0, enablejsapi: 1 },
-        events: { onReady: (e: any) => e.target.mute?.() },
+        events: {
+          onReady: () => {
+            const prevId = listaDesdeAPI[listaDesdeAPI.length - 1]?.youtubeId;
+            if (prevId) playerPrePrevRef.current?.cueVideoById?.(prevId);
+          },
+        },
       });
 
-      // Cargar info inicial
-      updateTrackInfo(PLAYLIST[currentIndex].id);
+      iniciarPollingProgreso();
+      // Inicializa los preloads en base al índice actual (0)
+      refrescarPreloads(0, listaDesdeAPI);
     })();
 
-    // Polling de tiempo/duración
-    const startPolling = () => {
-      if (pollIntervalRef.current != null) return;
-      pollIntervalRef.current = window.setInterval(() => {
-        const p = playerRef.current;
-        if (!p) return;
-        const ct = p.getCurrentTime?.() || 0;
-        const d = p.getDuration?.() || duration;
-        setCurrentTime(ct);
-        if (d && d !== duration) setDuration(d);
-      }, 250) as unknown as number;
-    };
-    startPolling();
-
     return () => {
-      destroyed = true;
-      try { playerRef.current?.destroy?.(); } catch {}
-      try { preloadPrevRef.current?.destroy?.(); } catch {}
-      try { preloadNextRef.current?.destroy?.(); } catch {}
-      if (pollIntervalRef.current != null) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
+      desmontado = true;
+      detenerPollingProgreso();
+      try {
+        playerMainRef.current?.destroy?.();
+        playerPreNextRef.current?.destroy?.();
+        playerPrePrevRef.current?.destroy?.();
+      } catch {}
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /** Carga una pista por índice y actualiza preloads */
-  const loadTrack = (index: number, autoplay = false) => {
-    const p = playerRef.current;
+  async function cargarListaDesdeAPI(): Promise<Cancion[]> {
+    try {
+      const res = await fetch(API_URL);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const parsed: Cancion[] = Array.isArray(json) ? json : [];
+      return parsed.filter((x) => !!x.youtubeId);
+    } catch (err) {
+      console.error("Error cargando canciones:", err);
+      return [];
+    }
+  }
+
+  /** ============== progreso & controles ============== */
+  const iniciarPollingProgreso = () => {
+    if (idIntervaloProgresoRef.current != null) return;
+    idIntervaloProgresoRef.current = window.setInterval(() => {
+      const p = playerMainRef.current;
+      if (!p) return;
+      const t = p.getCurrentTime?.() || 0;
+      const d = p.getDuration?.() || duracion;
+      setTiempoActual(t);
+      if (d && d !== duracion) setDuracion(d);
+    }, 250) as unknown as number;
+  };
+
+  const detenerPollingProgreso = () => {
+    if (idIntervaloProgresoRef.current != null) {
+      clearInterval(idIntervaloProgresoRef.current);
+      idIntervaloProgresoRef.current = null;
+    }
+  };
+
+  function normalizarIndice(n: number, total: number) {
+    return ((n % total) + total) % total;
+  }
+
+  function refrescarPreloads(nuevoIndice: number, arr = lista) {
+    if (!arr.length) return;
+    const total = arr.length;
+    const idx = normalizarIndice(nuevoIndice, total);
+    const idxNext = normalizarIndice(idx + 1, total);
+    const idxPrev = normalizarIndice(idx - 1, total);
+
+    const nextId = arr[idxNext]?.youtubeId;
+    const prevId = arr[idxPrev]?.youtubeId;
+
+    // Cue en players ocultos. Nota: políticas de autoplay pueden limitar buffering real,
+    // pero la metadata y parte de la caché quedan preparadas, reduciendo la latencia perceptible.
+    if (playerPreNextRef.current && nextId) {
+      try { playerPreNextRef.current.cueVideoById(nextId); } catch {}
+    }
+    if (playerPrePrevRef.current && prevId) {
+      try { playerPrePrevRef.current.cueVideoById(prevId); } catch {}
+    }
+  }
+
+  function cambiarPista(nuevoIndice: number, autoplay = true) {
+    if (!lista.length) return;
+    const total = lista.length;
+    const idx = normalizarIndice(nuevoIndice, total);
+    setIndiceActual(idx);
+    setTiempoActual(0);
+
+    const nextId = lista[idx].youtubeId;
+    // Intento: si está cued en preNext/prePrev, igual cargamos en el main (no se puede transferir buffer entre instancias)
+    if (autoplay) playerMainRef.current?.loadVideoById?.(nextId);
+    else {
+      // Cargamos metadata sin reproducir
+      if (playerMainRef.current?.cueVideoById) playerMainRef.current.cueVideoById(nextId);
+      else playerMainRef.current?.loadVideoById?.(nextId);
+      playerMainRef.current?.pauseVideo?.();
+    }
+
+    if (lista[idx]?.duration) setDuracion(lista[idx].duration!);
+
+    // Actualizamos preloads con el nuevo índice
+    refrescarPreloads(idx);
+  }
+
+  const pistaSiguiente = (autoplay = true) => cambiarPista(indiceActual + 1, autoplay);
+  const pistaAnterior = (autoplay = true) => cambiarPista(indiceActual - 1, autoplay);
+
+  const alternarPlayPause = () => {
+    const p = playerMainRef.current;
     if (!p) return;
-
-    const safeIndex = ((index % PLAYLIST.length) + PLAYLIST.length) % PLAYLIST.length;
-    setCurrentIndex(safeIndex);
-    setIsPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
-
-    const videoId = PLAYLIST[safeIndex].id;
-    autoplay ? p.loadVideoById(videoId) : p.cueVideoById(videoId);
-    updateTrackInfo(videoId);
-
-    // Calcular IDs adyacentes y “calentar” prev/next
-    const prevIdx = (safeIndex - 1 + PLAYLIST.length) % PLAYLIST.length;
-    const nextIdx = (safeIndex + 1) % PLAYLIST.length;
-    primePlayer(preloadPrevRef.current, PLAYLIST[prevIdx].id, PRELOAD_WARM_PLAY);
-    primePlayer(preloadNextRef.current, PLAYLIST[nextIdx].id, PRELOAD_WARM_PLAY);
+    const ESTADO = window.YT.PlayerState;
+    const estado = p.getPlayerState?.();
+    if (estado === ESTADO.PLAYING) p.pauseVideo?.();
+    else p.playVideo?.();
   };
 
-  const togglePlayPause = () => {
-    const p = playerRef.current;
-    if (!p) return;
-    const YTS = window.YT.PlayerState;
-    const state = p.getPlayerState?.();
-    if (state !== YTS.PLAYING) p.playVideo();
-    else p.pauseVideo();
+  const onCambiarProgreso = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = Number(e.target.value) || 0;
+    const nuevo = Math.min(1, Math.max(0, v));
+    const segundos = (duracion || 0) * nuevo;
+    playerMainRef.current?.seekTo?.(segundos, true);
+    setTiempoActual(segundos);
   };
 
-  const prevTrack = (autoplay = true) => loadTrack(currentIndex - 1, autoplay);
-  const nextTrack = (autoplay = true) => loadTrack(currentIndex + 1, autoplay);
+  const progreso = duracion ? Math.min(1, Math.max(0, tiempoActual / duracion)) : 0;
 
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const p = playerRef.current;
-    if (!p || !duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const pct = Math.min(1, Math.max(0, x / rect.width));
-    const newTime = pct * duration;
-    p.seekTo(newTime, true);
-    setCurrentTime(newTime);
-  };
-
-  const progress = duration ? (currentTime / duration) * 100 : 0;
-
+  /** ====================== UI ====================== */
   return (
     <>
-      {/* Player principal oculto */}
+      {/* Hosts ocultos para players */}
       <div
-        ref={playerHostRef}
-        style={{
-          position: "absolute",
-          width: 0,
-          height: 0,
-          overflow: "hidden",
-          opacity: 0,
-          pointerEvents: "none",
-        }}
+        ref={hostMainRef}
+        style={{ position: "absolute", width: 0, height: 0, overflow: "hidden", opacity: 0 }}
+        aria-hidden="true"
+      />
+      <div
+        ref={hostPreNextRef}
+        style={{ position: "absolute", width: 0, height: 0, overflow: "hidden", opacity: 0 }}
+        aria-hidden="true"
+      />
+      <div
+        ref={hostPrePrevRef}
+        style={{ position: "absolute", width: 0, height: 0, overflow: "hidden", opacity: 0 }}
         aria-hidden="true"
       />
 
-      {/* Preloads ocultos (prev / next) */}
-      <div
-        ref={preloadPrevHostRef}
-        style={{
-          position: "absolute",
-          width: 0,
-          height: 0,
-          overflow: "hidden",
-          opacity: 0,
-          pointerEvents: "none",
-        }}
-        aria-hidden="true"
-      />
-      <div
-        ref={preloadNextHostRef}
-        style={{
-          position: "absolute",
-          width: 0,
-          height: 0,
-          overflow: "hidden",
-          opacity: 0,
-          pointerEvents: "none",
-        }}
-        aria-hidden="true"
-      />
-
-      {/* UI del reproductor */}
-      <div className="MusicPlayer__MainContainer">
-        <nav className="MusicPlayer__LeftNav">
-          <div className="MusicPlayer__albumArtContainer">
-            {trackThumb && (
+      {mostrarVisualizador && (
+        <div className="Reproductor__VisualizadorOverlay" onClick={cerrarVisualizador} role="dialog" aria-modal="true">
+          <div className="Reproductor__VisualizadorContenido" onClick={(e) => e.stopPropagation()}>
+            <div className={`Reproductor__VisualizadorSlider ${animandoSlide ? "is-animating" : ""}`}>
+              {animandoSlide && imagenesVisualizador.length > 1 && (
+                <img
+                  key={`prev-${indicePrevioRef.current}-${imagenesVisualizador[indicePrevioRef.current] || "ph"}`}
+                  src={imagenesVisualizador[indicePrevioRef.current] || undefined}
+                  alt=""
+                  className="Reproductor__Slide Reproductor__Slide--out"
+                  draggable={false}
+                />
+              )}
               <img
-                src={trackThumb}
-                alt={trackTitle ? `Cover: ${trackTitle}` : "Cover"}
-                className="MusicPlayer__albumArtImage"
+                key={`cur-${indiceImagen}-${imagenesVisualizador[indiceImagen] || "ph"}`}
+                src={imagenesVisualizador[indiceImagen] || undefined}
+                alt=""
+                className="Reproductor__Slide Reproductor__Slide--in"
+                draggable={false}
+              />
+              {/* Fallback simple si no hay imágenes */}
+              {imagenesVisualizador.length === 0 && (
+                <div className="Reproductor__SlideFallback">Sin imágenes disponibles</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="Reproductor__ContenedorPrincipal">
+        <nav className="Reproductor__ZonaIzquierda">
+          <div className="Reproductor__ContenedorMiniatura" onClick={abrirVisualizador} title="Abrir visualizador de imágenes">
+            {miniaturaPista && (
+              <img
+                src={miniaturaPista}
+                alt={tituloPista ? `Portada: ${tituloPista}` : "Portada"}
+                className="Reproductor__ImagenMiniatura"
                 loading="eager"
                 decoding="async"
+                draggable={false}
               />
             )}
           </div>
-          <div className="MusicPlayer__trackInfoContainer">
-            <div className="MusicPlayer__trackTitle">{trackTitle}</div>
-            <div className="MusicPlayer__artistName">{trackAuthor}</div>
+          <div className="Reproductor__ContenedorInfoPista">
+            <div className="Reproductor__TituloPista">{tituloPista}</div>
+            <div className="Reproductor__AutorPista">{autorPista}</div>
           </div>
         </nav>
 
-        <nav className="MusicPlayer__CenterNav">
-          <div className="MusicPlayer__musicControlsContainer">
-            <div
-              className="MusicPlayer__button_backTrack"
-              id="MusicPlayer__button_backTrack"
-              onClick={() => prevTrack(true)}
-              role="button"
-              title="Anterior"
-              aria-label="Anterior"
-            >
-              ⏮
-            </div>
-
-            <div
-              className="MusicPlayer__button_playStop"
-              id="MusicPlayer__button_playStop"
-              onClick={togglePlayPause}
-              role="button"
-              aria-label={isPlaying ? "Pausar" : "Reproducir"}
-              title={isPlaying ? "Pausar" : "Reproducir"}
-            >
-              {isPlaying ? "⏸" : "▶"}
-            </div>
-
-            <div
-              className="MusicPlayer__button_nextTrack"
-              id="MusicPlayer__button_nextTrack"
-              onClick={() => nextTrack(true)}
-              role="button"
-              title="Siguiente"
-              aria-label="Siguiente"
-            >
-              ⏭
-            </div>
+        <nav className="Reproductor__ZonaCentral">
+          <div className="Reproductor__ContenedorControles">
+            <button className="Reproductor__BotonControl" onClick={() => pistaAnterior(true)}> ⏮</button>
+            <button className="Reproductor__BotonControl" onClick={alternarPlayPause} disabled={!lista.length}>
+              {estaReproduciendo ? "⏸" : "▶"}
+            </button>
+            <button className="Reproductor__BotonControl" onClick={() => pistaSiguiente(true)}> ⏭</button>
           </div>
-
-          {/* Barra de progreso + tiempos */}
-          <div className="MusicPlayer__progressBarContainer">
-            <div className="MusicPlayer__time MusicPlayer__currentTime">{formatTime(currentTime)}</div>
-
-            <div
-              className="MusicPlayer__progressTrack"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={Math.round(duration)}
-              aria-valuenow={Math.round(currentTime)}
-              onClick={handleSeek}
-              title="Click para buscar en la pista"
-            >
-              <div className="MusicPlayer__progressFill" style={{ width: `${progress}%` }} />
-            </div>
-
-            <div className="MusicPlayer__time MusicPlayer__totalTime">{formatTime(duration)}</div>
+          <div className="Reproductor__ContenedorProgreso">
+            <div className="Reproductor__Tiempo Reproductor__TiempoActual">{formatearTiempo(tiempoActual)}</div>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.001}
+              value={progreso}
+              onChange={onCambiarProgreso}
+              className="Reproductor__BarraProgreso"
+              disabled={!lista.length}
+            />
+            <div className="Reproductor__Tiempo Reproductor__TiempoTotal">{formatearTiempo(duracion)}</div>
           </div>
         </nav>
 
-        <nav className="MusicPlayer__RightNav">
-          <div className="MusicPlayer__volumeControl">🔊</div>
-          <div className="MusicPlayer__playlistControl">📃</div>
-          <div className="MusicPlayer__iaImagesControl">🖼️</div>
+        <nav className="Reproductor__ZonaDerecha">
+          <div className="Reproductor__ControlVolumen">🔊</div>
+          <div className="Reproductor__ControlLista">📃</div>
+          <div className="Reproductor__ControlImagenesIA" onClick={abrirVisualizador}>🖼️</div>
         </nav>
       </div>
     </>
   );
 }
-    
