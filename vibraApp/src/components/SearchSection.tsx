@@ -18,6 +18,7 @@ import SearchContext from "../hooks/searchContext";
 /* Components */
 
 /* styles */
+import "./search-section.css"
 
 // const SearchSection =(props:SearchSectionProps) => {
 const SearchSection =() => {

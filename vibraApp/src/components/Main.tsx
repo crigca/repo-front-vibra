@@ -17,6 +17,7 @@ import type {ReproduceProps} from "../types/reproduceProps";
 /* hooks */
 import SearchContext from "../hooks/searchContext";
 /* styles */
+import "./main.css";
 
 const Main =(props:{handlerPlayer:any}) => {
 

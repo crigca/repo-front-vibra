@@ -15,6 +15,10 @@ import SearchContext from "../hooks/searchContext";
 /* Components */
 
 /* styles */
+
+import "./result-section.css";
+
+
 //props:{playTrack:any,dataRecive:ResultProps[]}
 const ResultsSection =() => {
 

@@ -1,23 +1,34 @@
+/* 
+  App.tsx
+ */
 import './App.css'
+
+/* Dependencies  */
 import Main from './components/Main'
+import { useState } from "react";
+
+
+/* Components */
 import {Sidebar} from './components/Sidebar'
-//import {Player} from './components/Player'
-//import {playTrack} from './components/player'
+import { MusicPlayer } from './components/MusicPlayer'
+
+/* types */
+import type {ReproduceProps} from "../src/types/reproduceProps";
 
 function App() {
+  const [dataToReproduce, setDataToReproduce]:[ReproduceProps,any] = useState({id:""});
   
-  /*Mock for player*/
-  const playTrack=():any=>{
+  const playTrack=(data:ReproduceProps)=>{
     console.log("player:playing");
+    setDataToReproduce(data);
   }
-  
   return (
     <>
       <Sidebar/>
       <Main handlerPlayer={playTrack}/>
-      {/* <Player/> */}
+      <MusicPlayer dataPlayer={dataToReproduce}/>
     </>
   )
 }
 
-export default App
+export default App;
