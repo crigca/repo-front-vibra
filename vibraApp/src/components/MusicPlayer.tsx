@@ -785,11 +785,9 @@ export function MusicPlayer() {
     [detallesCanciones]
   );
 
-  const cerrarLista = () => setMostrarLista(false);
   const alternarLista = () => setMostrarLista((prev) => !prev);
 
   const onSeleccionarCancion = (indice: number) => {
-    cerrarLista();
     cambiarPista(indice, true);
   };
 
