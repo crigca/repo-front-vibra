@@ -15,23 +15,6 @@
   --mp-slider-fondo: rgba(255, 255, 255, 0.12);
   --mp-slider-borde: rgba(255, 255, 255, 0.08);
   --mp-slider-thumb: #f5f3ff;
-  --mp-slider-thumb-outline: rgba(139, 92, 246, 0.35);
-  --mp-overlay-backdrop: rgba(5, 7, 11, 0.78);
-}
-
-.Reproductor__ContenedorPrincipal {
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  z-index: 60;
-  display: grid;
-  grid-template-columns: 1fr minmax(420px, 2fr) 1fr;
-  gap: 16px;
-  background: linear-gradient(180deg, var(--mp-elevado), var(--mp-fondo));
-  align-items: center;
-  padding: 12px 16px;
-  box-shadow: 0 -8px 24px rgba(0,0,0,.35);
-  border-top: 1px solid var(--mp-borde);
-  user-select: none;
 }
 
 /* ====== Zona izquierda: portada + títulos ====== */
@@ -170,7 +153,7 @@
 .Reproductor__VisualizadorOverlay::before {
   content: "";
   position: absolute; inset: 0;
-  backdrop-filter: blur(12px) saturate(120%);
+  backdrop-filter: blur(4px) saturate(120%);
   background: var(--mp-overlay-backdrop);
   pointer-events: none;
   z-index: 0;
@@ -178,8 +161,8 @@
 
 .Reproductor__VisualizadorContenido {
   position: relative;
-  width: 80vw;
-  height: 80vh;
+  width: 75vw;
+  height: 75vh;
   overflow: hidden;
   border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.08);
