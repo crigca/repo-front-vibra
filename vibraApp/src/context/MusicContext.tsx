@@ -283,4 +283,43 @@ export const useMusicContext = () => {
   return context;
 };
 
+// Sebas estoy usando estos tres métodos para tomar la data desde el player, hay que trabajar acá en el MusicContext para conectar todo bien. por ahora lo deje harcodeado para testear
+
+export const playlistToPlayer= () => {
+
+  const LISTA_REPRODUCCION = [
+    { id: "iKI5q_hF0o0" },
+    { id: "Ulnobym-Ouo" },
+    { id: "N0Ovqd-epOI" },
+    { id: "eUlGF_8r5Ac" },
+    { id: "hXYCrTX-l24" },
+  ];
+  return LISTA_REPRODUCCION;
+
+}
+
+export const imagelistToPlayer= () => {
+
+  const IMAGENES_VISUALIZADOR: string[] = [
+    "https://indiehoy.com/wp-content/uploads/2025/08/eterna-inocencia.webp",
+    "https://es.rollingstone.com/wp-content/uploads/2022/11/eterna-inocencia.jpg",
+    "https://www.nacionrock.com/wp-content/uploads/IMG_2236.webp",
+    "https://www.ultrabrit.com/wp-content/uploads/2017/08/eterna-inocencia-guillermo-marmol-1.jpg",
+    "https://static.esnota.com/uploads/2021/12/Guille.jpg",
+    "https://planetacabezon.com/06-2023/resize_1686602016.jpg",
+    "https://www.notaalpie.com.ar/wp-content/uploads/2023/08/6-Credito-Yoel-Alderisi-1.jpg",
+    "https://www.futuro.cl/wp-content/uploads/2023/11/eterna-inocencia-768x433.webp",
+    "https://acordesweb.com/img/eterna-inocencia-f7cc82cdfecfa0e11aa8168dee01fa8a.jpg",
+    "https://cdn.rock.com.ar/wp-content/uploads/2024/01/eterna-inocencia-2.jpeg"
+  ];
+  return IMAGENES_VISUALIZADOR;
+}
+
+export const songToPlayer= () => {
+
+  const SONG_TO_PLAY = { id: "iKI5q_hF0o0" };
+  return SONG_TO_PLAY;
+  
+}
+
 export default MusicContext;

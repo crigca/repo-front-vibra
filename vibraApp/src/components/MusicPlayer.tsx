@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, CSSProperties, MutableRefObject } from "react";
+import { playlistToPlayer, imagelistToPlayer, songToPlayer } from "../context/MusicContext";
 import "./MusicPlayer.css";
 
 declare global {
@@ -11,8 +12,6 @@ declare global {
 }
 
 /** ====== Iconos SVG (heredan currentColor) ====== */
-const iconProps = { width: 20, height: 20, viewBox: "0 0 24 24", role: "img", "aria-hidden": true } as const;
-
 const Icon = {
   Prev: () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M208,47.88V208.12a16,16,0,0,1-24.43,13.43L64,146.77V216a8,8,0,0,1-16,0V40a8,8,0,0,1,16,0v69.23L183.57,34.45A15.95,15.95,0,0,1,208,47.88Z"></path></svg>
@@ -47,27 +46,10 @@ const Icon = {
 };
 
 /** Lista de videos (YouTube IDs) */
-const LISTA_REPRODUCCION = [
-  { id: "iKI5q_hF0o0" },
-  { id: "Ulnobym-Ouo" },
-  { id: "N0Ovqd-epOI" },
-  { id: "eUlGF_8r5Ac" },
-  { id: "hXYCrTX-l24" },
-];
+const LISTA_REPRODUCCION = playlistToPlayer();
 
-/** Arreglo hardcodeado de imágenes para el visualizador (rellená con tus URLs) */
-const IMAGENES_VISUALIZADOR: string[] = [
-    "https://indiehoy.com/wp-content/uploads/2025/08/eterna-inocencia.webp",
-    "https://es.rollingstone.com/wp-content/uploads/2022/11/eterna-inocencia.jpg",
-    "https://www.nacionrock.com/wp-content/uploads/IMG_2236.webp",
-    "https://www.ultrabrit.com/wp-content/uploads/2017/08/eterna-inocencia-guillermo-marmol-1.jpg",
-    "https://static.esnota.com/uploads/2021/12/Guille.jpg",
-    "https://planetacabezon.com/06-2023/resize_1686602016.jpg",
-    "https://www.notaalpie.com.ar/wp-content/uploads/2023/08/6-Credito-Yoel-Alderisi-1.jpg",
-    "https://www.futuro.cl/wp-content/uploads/2023/11/eterna-inocencia-768x433.webp",
-    "https://acordesweb.com/img/eterna-inocencia-f7cc82cdfecfa0e11aa8168dee01fa8a.jpg",
-    "https://cdn.rock.com.ar/wp-content/uploads/2024/01/eterna-inocencia-2.jpeg"
-  ];
+/** Arreglo de url de imágenes para el visualizador */
+const IMAGENES_VISUALIZADOR = imagelistToPlayer();
 
 /** Precarga básica/templada de iframes */
 function cargarAPIYouTube(): Promise<void> {
@@ -109,6 +91,15 @@ export function MusicPlayer() {
   const autoplayPendienteRef = useRef(false);
   const indiceActualRef = useRef(0);
   const estaReproduciendoRef = useRef(false);
+
+  /** === Nuevo: ID inicial desde songToPlayer() === */
+  const INICIO = songToPlayer(); // { id: string }
+  const INDICE_INICIAL_EN_LISTA = LISTA_REPRODUCCION.findIndex(v => v?.id === INICIO?.id);
+  const INDICE_INICIAL = INDICE_INICIAL_EN_LISTA >= 0 ? INDICE_INICIAL_EN_LISTA : 0;
+
+  /** Override solo para el PRIMER cargado del iframe "current" */
+  const idInicialOverrideRef = useRef<string | null>(INICIO?.id || null);
+
 
   const [indiceActual, setIndiceActual] = useState(0);
   const [estaReproduciendo, setEstaReproduciendo] = useState(false);
@@ -423,13 +414,37 @@ export function MusicPlayer() {
       }
       if (desmontado) return;
 
+      
       crearPlayer("prev", contenedorAnteriorRef.current);
       crearPlayer("current", contenedorActualRef.current);
       crearPlayer("next", contenedorSiguienteRef.current);
 
-      sincronizarTodos(indiceActualRef.current, true);
+      /** === Nuevo: primer sincronización usando songToPlayer() en "current" === */
+      const idx = INDICE_INICIAL;
+      const prevIdx = normalizarIndice(idx - 1);
+      const nextIdx = normalizarIndice(idx + 1);
+
+      videosObjetivoRef.current = {
+        prev: LISTA_REPRODUCCION[prevIdx]?.id,
+        current: idInicialOverrideRef.current || LISTA_REPRODUCCION[idx]?.id,
+        next: LISTA_REPRODUCCION[nextIdx]?.id,
+      };
+
+      // Cueamos prev/next y current (sin autoplay aquí)
+      sincronizarSlot("prev");
+      sincronizarSlot("next");
+      sincronizarSlot("current", false);
+
+      // Fijamos el índice actual en el que arrancamos
+      indiceActualRef.current = idx;
+      setIndiceActual(idx);
+
+      // Progreso + metadatos considerando override
       iniciarPollingProgreso();
-      actualizarMetadatos();
+      actualizarMetadatos(idx, idInicialOverrideRef.current || undefined);
+
+      // Importante: limpiar el override para siguientes cambios
+      idInicialOverrideRef.current = null;
     };
 
     prepararPlayers();
@@ -484,11 +499,11 @@ export function MusicPlayer() {
     setTiempoActual(segundos);
   };
 
-  async function actualizarMetadatos(idx = indiceActual) {
+  async function actualizarMetadatos(idx = indiceActual, videoIdOverride?: string) {
     try {
       const entrada = LISTA_REPRODUCCION[idx];
-      if (!entrada) return;
-      const videoId = entrada.id;
+      const videoId = videoIdOverride || entrada?.id;
+      if (!videoId) return;
       const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
       const resp = await fetch(oembedUrl);
       if (!resp.ok) throw new Error(`Respuesta ${resp.status}`);
