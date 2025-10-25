@@ -596,6 +596,8 @@ export function MusicPlayer() {
   /* === 9. NAVEGACIÓN ENTRE PISTAS ======================================== */
   /* ======================================================================== */
 
+  //  cambiarPista se encarga de cambiar la canción actual en una lista de reproducción
+  //  ((a % n) + n) % n → siempre da un número entre 0 y n - 1
   function cambiarPista(nuevoIndice: number, autoplay = true) {
     const total = LISTA_REPRODUCCION.length;
     if (!total) return;
