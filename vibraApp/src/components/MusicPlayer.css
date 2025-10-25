@@ -1,115 +1,333 @@
+/* =========================
+   MusicPlayer.css (estilo oscuro tipo Spotify)
+   Mapea el estilo del ejemplo a las clases Reproductor__*
+   ========================= */
 
-/* File: src/components/MusicPlayer.css*/
-/* Paleta y layout base */
+/* ====== Tokens de color y base ====== */
 :root {
-  --mp-fondo: #0b0b0f; /* negro profundo */
+  --mp-fondo: #0b0b10;
+  --mp-elevado: #11121a;
+  --mp-texto: #e9e9ef;
+  --mp-texto-dim: #a3a3b2;
+  --mp-borde: #26273a;
   --mp-acento: #8b5cf6; /* violeta */
-  --mp-texto: #e5e7eb; /* gris claro */
-  --mp-texto-dim: #9ca3af; /* gris medio */
-  --mp-borde: #1f2330;
 }
 
-/* Estado vacío */
-.mp-contenedor-vacio {
+.Reproductor__ContenedorPrincipal {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 0;
-  width: 75vw;
-  background: var(--mp-fondo);
-  border-top-left-radius: 14px;
-  border-top-right-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--mp-texto-dim);
-  box-shadow: 0 -8px 24px rgba(0,0,0,.35);
-}
-.mp-vacio { font-size: 14px; }
-
-/* Contenedor raíz de la barra */
-.mp-root {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 0;
-  width: 75vw;
-  z-index: 40;
-}
-
-.mp-barra {
-  height: 92px;
-  background: var(--mp-fondo);
-  border-top-left-radius: 14px;
-  border-top-right-radius: 14px;
+  left: 0; right: 0; bottom: 0;
+  z-index: 20;
   display: grid;
-  grid-template-columns: 1fr 1.2fr 0.8fr; /* izq / centro / der */
-  gap: 12px;
+  grid-template-columns: 1fr minmax(420px, 2fr) 1fr;
+  gap: 16px;
+  background: linear-gradient(180deg, var(--mp-elevado), var(--mp-fondo));
   align-items: center;
   padding: 12px 16px;
   box-shadow: 0 -8px 24px rgba(0,0,0,.35);
   border-top: 1px solid var(--mp-borde);
+  user-select: none;
 }
 
-/* Zona izquierda: info */
-.mp-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.mp-portada { width: 64px; height: 64px; border-radius: 8px; overflow: hidden; background: #111; flex: 0 0 auto; }
-.mp-portada img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.mp-portada-placeholder { width: 100%; height: 100%; background: #111; }
-
-.mp-titulos { min-width: 0; }
-.mp-titulo { color: var(--mp-texto); font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mp-autor { color: var(--mp-texto-dim); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mp-playlist { color: var(--mp-acento); font-size: 11px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-/* Centro: controles y progreso */
-.mp-centro { display: flex; flex-direction: column; gap: 8px; align-items: center; }
-.mp-controles { display: flex; align-items: center; gap: 10px; }
-.mp-btn { background: transparent; color: var(--mp-texto); border: 1px solid transparent; padding: 8px; border-radius: 10px; cursor: pointer; transition: transform .08s ease, background .2s ease; }
-.mp-btn:hover { background: rgba(139,92,246,.1); }
-.mp-btn:active { transform: scale(0.95); }
-.mp-btn svg { fill: var(--mp-texto); }
-.mp-btn-play { border: 1px solid var(--mp-acento); box-shadow: 0 0 0 3px rgba(139,92,246,.15) inset; }
-
-.mp-progreso { width: 100%; display: grid; grid-template-columns: 40px 1fr 40px; gap: 10px; align-items: center; }
-.mp-tiempo { color: var(--mp-texto-dim); font-size: 12px; text-align: center; }
-
-.mp-barra-progreso { height: 6px; background: #1a1a22; border-radius: 999px; position: relative; cursor: pointer; overflow: hidden; }
-.mp-barra-progreso-llenado { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, var(--mp-acento), #a78bfa); }
-
-/* Derecha: volumen */
-.mp-derecha { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-.mp-volumen { width: 140px; }
-.mp-volumen[type="range"] {
-  -webkit-appearance: none; appearance: none; height: 6px; border-radius: 999px; background: #1a1a22; outline: none;
+/* ====== Zona izquierda: portada + títulos ====== */
+.Reproductor__ZonaIzquierda {
+  display: flex; align-items: center; gap: 12px; min-width: 0;
 }
-.mp-volumen[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--mp-acento); cursor: pointer; border: none;
-}
-.mp-volumen[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--mp-acento); border: none; cursor: pointer; }
 
-/* Iframes ocultos */
+.Reproductor__ContenedorMiniatura {
+  width: 64px; height: 64px; border-radius: 8px; overflow: hidden;
+  background: #111; flex: 0 0 auto; cursor: pointer;
+  border: 1px solid var(--mp-borde);
+}
+.Reproductor__ImagenMiniatura {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+
+.Reproductor__ContenedorInfoPista { min-width: 0; }
+.Reproductor__TituloPista {
+  color: var(--mp-texto);
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.Reproductor__AutorPista {
+  color: var(--mp-texto-dim);
+  font-size: 12px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ====== Zona central: controles + progreso ====== */
+.Reproductor__ZonaCentral {
+  display: flex; flex-direction: column; gap: 8px; align-items: center;
+}
+
+.Reproductor__ContenedorControles {
+  display: flex; align-items: center; gap: 10px;
+}
+
+.Reproductor__BotonControl {
+  background: transparent;
+  color: var(--mp-texto);
+  border: 1px solid transparent;
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform .08s ease, background .2s ease, border-color .2s ease;
+  font-size: 16px; line-height: 1;
+}
+.Reproductor__BotonControl:hover { background: rgba(139,92,246,.10); }
+.Reproductor__BotonControl:active { transform: scale(0.95); }
+/* Botón central (play/pause) con acento visual */
+.Reproductor__ContenedorControles .Reproductor__BotonControl:nth-child(2) {
+  border: 1px solid var(--mp-acento);
+  box-shadow: 0 0 0 3px rgba(139,92,246,.15) inset;
+  border-radius: 12px;
+}
+
+.Reproductor__ContenedorProgreso {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  gap: 10px; align-items: center;
+}
+
+.Reproductor__Tiempo {
+  color: var(--mp-texto-dim);
+  font-size: 12px; text-align: center;
+}
+
+/* ====== Input range (progreso) ====== */
+.Reproductor__BarraProgreso {
+  -webkit-appearance: none; appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #1a1a22;
+  border-radius: 999px;
+  outline: none;
+  overflow: hidden;
+  cursor: pointer;
+}
+/* “Truco” visual del llenado: usamos el track y el thumb para simularlo */
+.Reproductor__BarraProgreso::-webkit-slider-runnable-track {
+  height: 6px; background: #1a1a22;
+}
+.Reproductor__BarraProgreso::-moz-range-track {
+  height: 6px; background: #1a1a22; border: none;
+}
+.Reproductor__BarraProgreso::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--mp-acento); border: none; margin-top: -4px;
+  box-shadow:
+    -1000px 0 0 1000px linear-gradient(90deg, var(--mp-acento), #a78bfa);
+}
+.Reproductor__BarraProgreso::-moz-range-progress {
+  background: linear-gradient(90deg, var(--mp-acento), #a78bfa);
+  height: 6px;
+}
+.Reproductor__BarraProgreso::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--mp-acento); border: none;
+}
+
+/* ====== Zona derecha: iconos (volumen/lista/IA) ====== */
+.Reproductor__ZonaDerecha {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+}
+.Reproductor__ZonaDerecha > div {
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border-radius: 10px;
+  color: var(--mp-texto);
+  cursor: pointer;
+  transition: background .2s ease, transform .08s ease;
+}
+.Reproductor__ZonaDerecha > div:hover { background: rgba(139,92,246,.10); }
+.Reproductor__ZonaDerecha > div:active { transform: scale(0.95); }
+
+/* ====== Overlay Visualizador ====== */
+.Reproductor__VisualizadorOverlay {
+  position: fixed; inset: 0; z-index: 30;
+  display: grid; place-items: center;
+}
+.Reproductor__VisualizadorOverlay::before {
+  content: "";
+  position: absolute; inset: 0;
+  backdrop-filter: blur(8px);
+  background: rgba(0,0,0,.35);
+}
+
+.Reproductor__VisualizadorContenido {
+  position: relative;
+  width: min(1100px, 92vw);
+  height: min(72vh, 72dvh);
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--mp-borde);
+  box-shadow: 0 16px 40px rgba(0,0,0,.45);
+  background: #000;
+}
+
+.Reproductor__VisualizadorSlider {
+  position: absolute; inset: 0;
+}
+
+/* Slides */
+.Reproductor__Slide {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+  transform: translateX(0); opacity: 1;
+}
+
+/* Animación simple tipo “slide” (entra el nuevo, sale el previo) */
+.Reproductor__VisualizadorSlider.is-animating .Reproductor__Slide--in {
+  animation: mp-slide-in .25s ease both;
+}
+.Reproductor__VisualizadorSlider.is-animating .Reproductor__Slide--out {
+  animation: mp-slide-out .25s ease both;
+}
+
+@keyframes mp-slide-in {
+  from { transform: translateX(12px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes mp-slide-out {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(-12px); opacity: 0; }
+}
+
+/* ===== Volumen ===== */
+.Reproductor__VolumenRange {
+  width: 140px;
+  -webkit-appearance: none; appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: #1a1a22;
+  outline: none;
+  cursor: pointer;
+  overflow: hidden;
+}
+.Reproductor__VolumenRange::-webkit-slider-runnable-track { height: 6px; background: #1a1a22; }
+.Reproductor__VolumenRange::-moz-range-track { height: 6px; background: #1a1a22; border: none; }
+.Reproductor__VolumenRange::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--mp-acento); border: none; margin-top: -4px;
+  box-shadow: -1000px 0 0 1000px linear-gradient(90deg, var(--mp-acento), #a78bfa);
+}
+.Reproductor__VolumenRange::-moz-range-progress {
+  background: linear-gradient(90deg, var(--mp-acento), #a78bfa);
+  height: 6px;
+}
+.Reproductor__VolumenRange::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--mp-acento); border: none;
+}
+
+/* ===== VARIANTE: barra tipo “ventana aero” centrada (75% ancho) ===== */
+.Reproductor__ContenedorPrincipal {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 20;
+
+  /* tamaño y posicionamiento */
+  width: 75%;
+  margin: 0 auto;
+
+  /* layout interno (puede ajustarse según tus gustos) */
+  display: grid;
+  grid-template-columns: 1.1fr minmax(380px, 1.6fr) 1fr;
+  gap: 16px;
+  align-items: center;
+
+  /* estética “aero” */
+  background: rgba(17, 18, 26, 0.55);             /* translúcido */
+  backdrop-filter: blur(12px) saturate(120%);     /* frosted glass */
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+
+  /* padding + safe area */
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0));
+  box-shadow:
+    0 -8px 24px rgba(0,0,0,.35),                  /* sombra externa */
+    inset 0 1px 0 rgba(255,255,255,0.03);         /* brillo sutil arriba */
+}
+
+/* Cuando necesites elevar más el “vidrio”: */
+@supports (backdrop-filter: blur(12px)) {
+  .Reproductor__ContenedorPrincipal {
+    background: rgba(17, 18, 26, 0.45);
+  }
+}
+
+/* Ajustes de responsive para que no quede demasiado angosto en mobile */
+@media (max-width: 1100px) {
+  .Reproductor__ContenedorPrincipal { width: 88%; }
+}
+@media (max-width: 900px) {
+  .Reproductor__ContenedorPrincipal {
+    width: 92%;
+    grid-template-columns: 1fr 1fr;
+  }
+  .Reproductor__ZonaDerecha { display: none; }
+}
+@media (max-width: 560px) {
+  .Reproductor__ContenedorMiniatura { width: 52px; height: 52px; }
+  .Reproductor__TituloPista { font-size: 13px; }
+  .Reproductor__AutorPista { font-size: 11px; }
+  .Reproductor__ContenedorProgreso { grid-template-columns: 36px 1fr 36px; }
+}
+
+/* SVGs: tamaño y herencia de color */
+.Reproductor__BotonControl svg,
+.Reproductor__ZonaDerecha svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+/* Botón de volumen (mismo look que los iconos de la derecha) */
+.Reproductor__VolumenBtn {
+  width: 50px; height: 50px;
+  display: grid; place-items: center;
+  border-radius: 10px;
+  color: var(--mp-texto);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  transition: background .2s ease, transform .08s ease;
+}
+.Reproductor__VolumenBtn:hover { background: rgba(139,92,246,.10); }
+.Reproductor__VolumenBtn:active { transform: scale(0.95); }
+
+/* (ya tenías) SVGs consistentes */
+.Reproductor__BotonControl svg,
+.Reproductor__ZonaDerecha svg,
+.Reproductor__VolumenBtn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+/* ====== Utilidad: contenedores invisibles de iframes (ya vienen inline) ====== */
+/* Si preferís clase, podrías envolverlos y aplicar esto */
 .mp-iframes-ocultos { position: absolute; width: 0; height: 0; overflow: hidden; }
 
-/* Overlay visualizador de imágenes */
-.mp-overlay { position: fixed; left: 0; right: 0; top: 0; z-index: 30; display: grid; place-items: center; }
-.mp-overlay-fondo { position: absolute; inset: 0; backdrop-filter: blur(8px); background: rgba(0,0,0,.35); }
-.mp-overlay-contenido { position: relative; width: min(1100px, 92vw); height: min(72vh, 72dvh); overflow: hidden; border-radius: 16px; border: 1px solid var(--mp-borde); box-shadow: 0 16px 40px rgba(0,0,0,.45); }
-.mp-overlay-slider { position: absolute; inset: 0; animation: mp-slide-in .25s ease; }
-.mp-overlay-img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.mp-overlay-cerrar { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,.5); color: #fff; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 18px; }
-
-@keyframes mp-slide-in { from { transform: translateX(12px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-/* Responsive */
+/* ====== Responsive ====== */
 @media (max-width: 900px) {
-  .mp-barra { grid-template-columns: 1fr 1fr; }
-  .mp-derecha { display: none; }
+  .Reproductor__ContenedorPrincipal {
+    grid-template-columns: 1fr 1fr;
+  }
+  .Reproductor__ZonaDerecha { display: none; }
 }
 
 @media (max-width: 560px) {
-  .mp-portada { width: 52px; height: 52px; }
-  .mp-titulo { font-size: 13px; }
-  .mp-autor { font-size: 11px; }
-  .mp-progreso { grid-template-columns: 36px 1fr 36px; }
+  .Reproductor__ContenedorMiniatura { width: 52px; height: 52px; }
+  .Reproductor__TituloPista { font-size: 13px; }
+  .Reproductor__AutorPista { font-size: 11px; }
+  .Reproductor__ContenedorProgreso { grid-template-columns: 36px 1fr 36px; }
 }

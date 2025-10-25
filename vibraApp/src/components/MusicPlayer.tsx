@@ -1,603 +1,443 @@
-// =============================
-// File: src/components/MusicPlayer.tsx
-// Requisitos acordados:
-// - TypeScript + Vite, CSS plano
-// - YouTube IFrame API nativo con 3 iframes ocultos (anterior / actual / siguiente)
-// - Sin autoplay por defecto; controles nativos ocultos
-// - Barra inferior fija (75% ancho), negro + acentos violeta
-// - Título (nombre del video), autor (canal) y portada (thumbnail YouTube)
-// - Controles: play/pause, prev, next, volumen (con mute), barra de progreso (click para seek)
-// - Atajos: Space (play/pause), ←/→ (±5s), ↑/↓ (volumen ±5), M (mute)
-// - Al terminar la pista: avanzar si hay siguiente, si no, detener
-// - Si un video da error/bloqueo: saltar al siguiente
-// - Overlay visualizador: cubre pantalla excepto el reproductor, slide cada 5s, pausa con la música, permanece abierto al cambiar pista
-// - Nombres de variables/funciones en español
-
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import "./MusicPlayer.css";
-import { useMusicContext } from "../context/MusicContext";
 
-// Tipos globales mínimos para la IFrame API
 declare global {
   interface Window {
     YT: any;
-    onYouTubeIframeAPIReady?: () => void;
+    onYouTubeIframeAPIReady: () => void;
+    _ytApiLoadingPromise?: Promise<void>;
   }
 }
 
-// Utilidades
-const segundosAmmss = (s: number): string => {
-  if (!isFinite(s) || s < 0) return "00:00";
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  const mm = String(m).padStart(2, "0");
-  const ss = String(sec).padStart(2, "0");
-  return `${mm}:${ss}`;
+/** ====== Iconos SVG (heredan currentColor) ====== */
+const iconProps = { width: 20, height: 20, viewBox: "0 0 24 24", role: "img", "aria-hidden": true } as const;
+
+const Icon = {
+  Prev: () => (
+    <svg {...iconProps}><path fill="currentColor" d="M6 5a1 1 0 0 1 1 1v4.382l7.553-4.534C16.532 5.19 18 5.969 18 7.133v9.734c0 1.164-1.469 1.943-3.447 1.285L7 13.618V18a1 1 0 1 1-2 0V6a1 1 0 0 1 1-1Z"/></svg>
+  ),
+  Next: () => (
+    <svg {...iconProps}><path fill="currentColor" d="M18 6v12a1 1 0 1 1-2 0v-4.382l-7.553 4.534C6.468 18.81 5 18.031 5 16.867V7.133c0-1.164 1.469-1.943 3.447-1.285L16 10.382V6a1 1 0 1 1 2 0Z"/></svg>
+  ),
+  Play: () => (
+    <svg {...iconProps}><path fill="currentColor" d="M8 6.82v10.36c0 .73.79 1.19 1.42.82l8.36-5.18a.96.96 0 0 0 0-1.64L9.42 6c-.63-.39-1.42.09-1.42.82Z"/></svg>
+  ),
+  Pause: () => (
+    <svg {...iconProps}><path fill="currentColor" d="M7 6h3v12H7zM14 6h3v12h-3z"/></svg>
+  ),
+  List: () => (
+    <svg {...iconProps}><path fill="currentColor" d="M5 7h14v2H5zM5 11h14v2H5zM5 15h14v2H5z"/></svg>
+  ),
+  Image: () => (
+    <svg {...iconProps}><path fill="currentColor" d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2 0h12v10H6zm2 8 3-4 3 3 2-2 2 3zM8.75 8.5a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5Z"/></svg>
+  ),
+  VolMute: () => (
+    <svg {...iconProps}><path fill="currentColor" d="M4 10h3l4-3v10l-4-3H4zM20 8.41 18.59 7 16 9.59 13.41 7 12 8.41 14.59 11 12 13.59 13.41 15 16 12.41 18.59 15 20 13.59 17.41 11 20 8.41Z"/></svg>
+  ),
+  VolLow: () => (
+    <svg {...iconProps}><path fill="currentColor" d="M4 10h3l4-3v10l-4-3H4zM16 9a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0v-4a1 1 0 0 1 1-1Z"/></svg>
+  ),
+  VolMid: () => (
+    <svg {...iconProps}><path fill="currentColor" d="M4 10h3l4-3v10l-4-3H4z"/><path fill="currentColor" d="M17 8a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0V9a1 1 0 0 1 1-1Zm2.5-3.5a1 1 0 0 1 1.415 1.414A7 7 0 0 0 22 12a7 7 0 0 0-1.085 3.586 1 1 0 1 1-1.998-.172C18.805 13.88 19.5 13.023 19.5 12s-.695-1.88-1.083-3.414A1 1 0 0 1 19.5 4.5Z"/></svg>
+  ),
+  VolHigh: () => (
+    <svg {...iconProps}><path fill="currentColor" d="M4 10h3l4-3v10l-4-3H4z"/><path fill="currentColor" d="M17 7a1 1 0 0 1 1 1v8a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Zm2.5-3.5a1 1 0 0 1 1.415 1.414A9 9 0 0 1 22 12a9 9 0 0 1-1.085 4.086 1 1 0 1 1-1.83-.912C19.89 13.88 20.5 13.023 20.5 12s-.61-1.88-1.415-3.174A1 1 0 0 1 19.5 4.5Z"/></svg>
+  ),
 };
 
-const obtenerMiniatura = (id?: string) =>
-  id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : "";
+/** Lista de videos (YouTube IDs) */
+const LISTA_REPRODUCCION = [
+  { id: "iKI5q_hF0o0" },
+  { id: "Ulnobym-Ouo" },
+  { id: "N0Ovqd-epOI" },
+  { id: "eUlGF_8r5Ac" },
+  { id: "hXYCrTX-l24" },
+];
 
-const PATRON_ID_YOUTUBE = /^[a-zA-Z0-9_-]{11}$/;
+/** Arreglo hardcodeado de imágenes para el visualizador (rellená con tus URLs) */
+const IMAGENES_VISUALIZADOR: string[] = [
+    "https://indiehoy.com/wp-content/uploads/2025/08/eterna-inocencia.webp",
+    "https://es.rollingstone.com/wp-content/uploads/2022/11/eterna-inocencia.jpg",
+    "https://www.nacionrock.com/wp-content/uploads/IMG_2236.webp",
+    "https://www.ultrabrit.com/wp-content/uploads/2017/08/eterna-inocencia-guillermo-marmol-1.jpg",
+    "https://static.esnota.com/uploads/2021/12/Guille.jpg",
+    "https://planetacabezon.com/06-2023/resize_1686602016.jpg",
+    "https://www.notaalpie.com.ar/wp-content/uploads/2023/08/6-Credito-Yoel-Alderisi-1.jpg",
+    "https://www.futuro.cl/wp-content/uploads/2023/11/eterna-inocencia-768x433.webp",
+    "https://acordesweb.com/img/eterna-inocencia-f7cc82cdfecfa0e11aa8168dee01fa8a.jpg",
+    "https://cdn.rock.com.ar/wp-content/uploads/2024/01/eterna-inocencia-2.jpeg"
+  ];
 
-const extraerIdYoutube = (valor?: string): string | null => {
-  if (!valor) return null;
-  const limpio = valor.trim();
-  if (PATRON_ID_YOUTUBE.test(limpio)) return limpio;
-
-  try {
-    const url = new URL(limpio);
-    const candidatoQuery = url.searchParams.get("v");
-    if (candidatoQuery && PATRON_ID_YOUTUBE.test(candidatoQuery)) {
-      return candidatoQuery;
-    }
-
-    const segmentos = url.pathname
-      .split("/")
-      .map((segmento) => segmento.trim())
-      .filter(Boolean);
-    const ultimoSegmento = segmentos[segmentos.length - 1];
-    if (ultimoSegmento && PATRON_ID_YOUTUBE.test(ultimoSegmento)) {
-      return ultimoSegmento;
-    }
-  } catch (_) {
-    // No era una URL; intentaremos extraer un patrón válido más abajo
+/** Precarga básica/templada de iframes */
+function cargarAPIYouTube(): Promise<void> {
+  if (window.YT && window.YT.Player) return Promise.resolve();
+  if (!window._ytApiLoadingPromise) {
+    window._ytApiLoadingPromise = new Promise<void>((resolver) => {
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      document.body.appendChild(script);
+      window.onYouTubeIframeAPIReady = () => resolver();
+    });
   }
+  return window._ytApiLoadingPromise!;
+}
 
-  const coincidenciaLibre = limpio.match(/[a-zA-Z0-9_-]{11}/);
-  if (coincidenciaLibre && coincidenciaLibre[0]) {
-    return coincidenciaLibre[0];
-  }
+function formatearTiempo(segundosTotales: number) {
+  const seg = Math.max(0, Math.floor(segundosTotales || 0));
+  const h = Math.floor(seg / 3600);
+  const m = Math.floor((seg % 3600) / 60);
+  const s = seg % 60;
+  const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+}
 
-  return null;
-};
+export function MusicPlayer() {
+  const reproductorRef = useRef<any>(null);
+  const hostReproductorRef = useRef<HTMLDivElement | null>(null);
 
-const esIdYoutubeValido = (valor?: string | null): valor is string =>
-  !!valor && PATRON_ID_YOUTUBE.test(valor);
+  const [indiceActual, setIndiceActual] = useState(0);
+  const [estaReproduciendo, setEstaReproduciendo] = useState(false);
+  const [duracion, setDuracion] = useState(0);
+  const [tiempoActual, setTiempoActual] = useState(0);
 
-// Constantes de estilo/UX
-const SALTO_SEGUNDOS = 5;
-const ALTURA_REPRODUCTOR_PX = 92; // usado para calcular overlay sin tapar la barra
+  const [tituloPista, setTituloPista] = useState("Cargando...");
+  const [autorPista, setAutorPista] = useState("");
+  const [miniaturaPista, setMiniaturaPista] = useState<string>("");
 
-export default function MusicPlayer() {
-  const {
-    idsCanciones,
-    indiceActual,
-    setIndiceActual,
-    urlsImagenes,
-    nombrePlaylist,
-    reproduciendo,
-    setReproduciendo,
-  } = useMusicContext();
+  const idIntervaloProgresoRef = useRef<number | null>(null);
 
-  // Refs para contenedores donde montaremos los iframes
-  const refContenedorAnterior = useRef<HTMLDivElement | null>(null);
-  const refContenedorActual = useRef<HTMLDivElement | null>(null);
-  const refContenedorSiguiente = useRef<HTMLDivElement | null>(null);
+  /* ===== Volumen + mute dinámico ===== */
+  const [volumen, setVolumen] = useState(0.8);     // 0..1
+  const [muted, setMuted] = useState(false);       // estado visual/control
+  const prevVolRef = useRef(0.8);                  // para restaurar post-mute
 
-  // Instancias YT.Player
-  const refPlayerAnterior = useRef<any>(null);
-  const refPlayerActual = useRef<any>(null);
-  const refPlayerSiguiente = useRef<any>(null);
-
-  // Metadatos de la canción actual (para UI)
-  const [tituloCancion, setTituloCancion] = useState<string>("");
-  const [autorCancion, setAutorCancion] = useState<string>("");
-
-  // Progreso y duración
-  const [segundosActuales, setSegundosActuales] = useState(0);
-  const [duracionTotal, setDuracionTotal] = useState(0);
-
-  // Volumen (0-100) y mute
-  const [volumen, setVolumen] = useState(100);
-  const [muteado, setMuteado] = useState(false);
-
-  // Overlay visualizador
-  const [overlayAbierto, setOverlayAbierto] = useState(false);
-  const indiceImagen = useRef(0);
-  const [urlImagenActual, setUrlImagenActual] = useState<string>(urlsImagenes[0] || "");
-  const intervaloSlideRef = useRef<number | null>(null);
-
-  const obtenerIdEnIndice = useCallback(
-    (indice: number | undefined): string | null => {
-      if (indice === undefined || indice < 0 || indice >= idsCanciones.length) {
-        return null;
-      }
-      return extraerIdYoutube(idsCanciones[indice]);
-    },
-    [idsCanciones]
-  );
-
-  const buscarIndiceValido = useCallback(
-    (desde: number, direccion: 1 | -1): number | null => {
-      let indice = desde + direccion;
-      while (indice >= 0 && indice < idsCanciones.length) {
-        if (esIdYoutubeValido(obtenerIdEnIndice(indice))) {
-          return indice;
-        }
-        indice += direccion;
-      }
-      return null;
-    },
-    [idsCanciones, obtenerIdEnIndice]
-  );
-
-  // IDs calculados según el índice actual (sanitizados)
-  const idActual = obtenerIdEnIndice(indiceActual) || undefined;
-  const idAnterior = obtenerIdEnIndice(indiceActual > 0 ? indiceActual - 1 : undefined) || undefined;
-  const idSiguiente =
-    obtenerIdEnIndice(indiceActual < idsCanciones.length - 1 ? indiceActual + 1 : undefined) || undefined;
-
-  // Cargar la API de YouTube una sola vez
+  // Aplica volumen/mute al player cuando cambien
   useEffect(() => {
-    const existeAPI = typeof window !== "undefined" && (window as any).YT && (window as any).YT.Player;
-    if (existeAPI) return; // Ya cargada
+    const p = reproductorRef.current;
+    if (!p || typeof p.setVolume !== "function") return;
+    const vol0a100 = Math.round(volumen * 100);
 
-    const script = document.createElement("script");
-    script.src = "https://www.youtube.com/iframe_api";
-    script.async = true;
-    document.body.appendChild(script);
+    if (muted || vol0a100 <= 0) {
+      p.mute?.();
+      p.setVolume?.(0);
+    } else {
+      p.unMute?.();
+      p.setVolume?.(vol0a100);
+    }
+  }, [volumen, muted]);
 
-    window.onYouTubeIframeAPIReady = () => {
-      // no-op aquí; los players se crean cuando los contenedores existen
-    };
+  const onCambiarVolumen = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = Number(e.target.value);
+    const clamped = Math.min(1, Math.max(0, isNaN(v) ? 0 : v));
+    setVolumen(clamped);
+    // si el usuario sube el volumen por encima de 0, desmuteamos visualmente
+    if (clamped > 0 && muted) setMuted(false);
+    if (clamped === 0 && !muted) setMuted(true);
+  };
 
-    return () => {
-      // Limpieza opcional del callback
-      if (window.onYouTubeIframeAPIReady) delete window.onYouTubeIframeAPIReady;
-    };
+  const alternarMute = () => {
+    setMuted((m) => {
+      if (m) {
+        // unmute: restaurar volumen previo (>0) o un default
+        const restore = prevVolRef.current > 0 ? prevVolRef.current : 0.8;
+        setVolumen(restore);
+        return false;
+      } else {
+        // mute: recordar volumen y bajar a 0
+        prevVolRef.current = volumen;
+        setVolumen(0);
+        return true;
+      }
+    });
+  };
+
+  // Elige el icono según volumen/mute
+  const VolumeIcon = () => {
+    if (muted || volumen === 0) return <Icon.VolMute />;
+    if (volumen < 0.34) return <Icon.VolLow />;
+    if (volumen < 0.67) return <Icon.VolMid />;
+    return <Icon.VolHigh />;
+  };
+
+  /* ============== VISUALIZADOR ============== */
+  const [mostrarVisualizador, setMostrarVisualizador] = useState(false);
+  const cacheImagenesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const imagenesEfectivas = useMemo(() => {
+    const limpias = IMAGENES_VISUALIZADOR.filter((u) => !!u);
+    return limpias.length ? limpias : [""];
   }, []);
 
-  // Si el ID actual es inválido, intentamos saltar a uno válido automáticamente
   useEffect(() => {
-    if (idsCanciones.length === 0) return;
-    if (esIdYoutubeValido(idActual)) return;
+    imagenesEfectivas.forEach((url) => {
+      if (!url) return;
+      if (cacheImagenesRef.current.has(url)) return;
+      const img = new Image();
+      img.decoding = "async";
+      img.loading = "eager";
+      img.src = url;
+      cacheImagenesRef.current.set(url, img);
+    });
+  }, [imagenesEfectivas]);
 
-    const siguienteValido = buscarIndiceValido(indiceActual, 1);
-    if (siguienteValido !== null && siguienteValido !== indiceActual) {
-      setIndiceActual(siguienteValido);
-      return;
-    }
+  const [indiceImagen, setIndiceImagen] = useState(0);
+  const indicePrevioRef = useRef(0);
+  const [animandoSlide, setAnimandoSlide] = useState(false);
 
-    const anteriorValido = buscarIndiceValido(indiceActual, -1);
-    if (anteriorValido !== null && anteriorValido !== indiceActual) {
-      setIndiceActual(anteriorValido);
-      return;
-    }
-
-    if (reproduciendo) {
-      setReproduciendo(false);
-    }
-  }, [
-    buscarIndiceValido,
-    idActual,
-    idsCanciones,
-    indiceActual,
-    reproduciendo,
-    setIndiceActual,
-    setReproduciendo,
-  ]);
-
-  // Crear / recrear players cuando la API esté disponible y los contenedores existan
   useEffect(() => {
-    if (!window.YT || !window.YT.Player) return; // aún no lista
+    if (!mostrarVisualizador) return;
+    if (!estaReproduciendo) return;
+    if (imagenesEfectivas.length < 2) return;
 
-    // Función para crear un player en un contenedor dado con un videoId (cue, sin reproducir)
-    const crearPlayer = (
-      contenedor: HTMLDivElement | null,
-      guardarRef: (p: any) => void,
-      videoId?: string
-    ) => {
-      if (!contenedor) return;
-      // Limpiar hijos previos si se re-crea
-      contenedor.innerHTML = "";
-      const div = document.createElement("div");
-      contenedor.appendChild(div);
-
-      const player = new window.YT.Player(div, {
-        width: "0",
-        height: "0",
-        videoId: videoId || undefined,
-        playerVars: {
-          controls: 0,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1,
-          iv_load_policy: 3,
-          // Sin autoplay
-          autoplay: 0,
-        },
-        events: {
-          onReady: () => {
-            if (videoId) {
-              try {
-                player.cueVideoById(videoId);
-              } catch (_) {}
-            }
-            // Sincronizar volumen/mute inicial
-            try {
-              player.setVolume(volumen);
-              if (muteado) player.mute(); else player.unMute();
-            } catch (_) {}
-          },
-          onStateChange: (e: any) => {
-            // Si es el player actual, actualizamos título/autor y manejamos fin de pista
-            if (player === refPlayerActual.current) {
-              if (e.data === window.YT.PlayerState.PLAYING) {
-                // Actualizar metadatos al arrancar
-                try {
-                  const data = player.getVideoData();
-                  setTituloCancion(data?.title || "");
-                  setAutorCancion(data?.author || "");
-                  setDuracionTotal(Math.floor(player.getDuration() || 0));
-                } catch (_) {}
-              }
-              if (e.data === window.YT.PlayerState.ENDED) {
-                // Si hay siguiente, avanzar; si no, detener reproducción
-                if (indiceActual < idsCanciones.length - 1) {
-                  manejarSiguiente();
-                } else {
-                  setReproduciendo(false);
-                }
-              }
-            }
-          },
-          onError: () => {
-            // Si el video falla (bloqueado, etc.), saltamos al siguiente
-            if (player === refPlayerActual.current) {
-              if (indiceActual < idsCanciones.length - 1) {
-                manejarSiguiente();
-              } else {
-                setReproduciendo(false);
-              }
-            }
-          },
-        },
-      });
-
-      guardarRef(player);
-    };
-
-    // Crear o recrear los tres players
-    crearPlayer(refContenedorAnterior.current, (p) => (refPlayerAnterior.current = p), idAnterior);
-    crearPlayer(refContenedorActual.current, (p) => (refPlayerActual.current = p), idActual);
-    crearPlayer(refContenedorSiguiente.current, (p) => (refPlayerSiguiente.current = p), idSiguiente);
-
-    return () => {
-      // Destruir players al desmontar o rehacer
-      [refPlayerAnterior.current, refPlayerActual.current, refPlayerSiguiente.current].forEach((p) => {
-        try { p?.destroy?.(); } catch (_) {}
-      });
-      refPlayerAnterior.current = null;
-      refPlayerActual.current = null;
-      refPlayerSiguiente.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [window.YT, idAnterior, idActual, idSiguiente]);
-
-  // Cuando cambie el índice actual, actualizamos qué video está en cada player
-  useEffect(() => {
-    const pa = refPlayerAnterior.current;
-    const pc = refPlayerActual.current;
-    const ps = refPlayerSiguiente.current;
-
-    try { if (pa && idAnterior) pa.cueVideoById(idAnterior); } catch (_) {}
-    try { if (pc && idActual) pc.cueVideoById(idActual); } catch (_) {}
-    try { if (ps && idSiguiente) ps.cueVideoById(idSiguiente); } catch (_) {}
-
-    // Si estábamos reproduciendo, reanudar en el nuevo track
-    if (reproduciendo && pc && idActual) {
-      try { pc.playVideo(); } catch (_) {}
-    } else {
-      try { pc?.pauseVideo?.(); } catch (_) {}
-    }
-    // Reset de progreso para la nueva pista
-    setSegundosActuales(0);
-    setDuracionTotal(0);
-  }, [indiceActual, idAnterior, idActual, idSiguiente, reproduciendo]);
-
-  // Polling de progreso/tiempo (cada 500ms) mientras haya player actual
-  useEffect(() => {
-    const pc = refPlayerActual.current;
-    if (!pc) return;
     const id = window.setInterval(() => {
-      try {
-        const t = pc.getCurrentTime?.() || 0;
-        const d = pc.getDuration?.() || 0;
-        setSegundosActuales(Math.floor(t));
-        setDuracionTotal(Math.floor(d));
-      } catch (_) {}
-    }, 500);
-    return () => window.clearInterval(id);
-  }, [refPlayerActual.current]);
+      setAnimandoSlide(true);
+      setIndiceImagen((idxAnterior) => {
+        indicePrevioRef.current = idxAnterior;
+        return (idxAnterior + 1) % imagenesEfectivas.length;
+      });
+      window.setTimeout(() => setAnimandoSlide(false), 450);
+    }, 5000);
 
-  // Sincronizar volumen/mute cuando cambia el estado local
-  useEffect(() => {
-    [refPlayerAnterior.current, refPlayerActual.current, refPlayerSiguiente.current].forEach((p) => {
-      if (!p) return;
-      try { p.setVolume(volumen); } catch (_) {}
-    });
-  }, [volumen]);
+    return () => clearInterval(id);
+  }, [mostrarVisualizador, estaReproduciendo, imagenesEfectivas.length]);
 
   useEffect(() => {
-    [refPlayerAnterior.current, refPlayerActual.current, refPlayerSiguiente.current].forEach((p) => {
-      if (!p) return;
-      try { muteado ? p.mute() : p.unMute(); } catch (_) {}
-    });
-  }, [muteado]);
+    setIndiceImagen(0);
+    indicePrevioRef.current = 0;
+  }, [indiceActual]);
 
-  // Atajos de teclado
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      // Evitar interferir si se escribe dentro de inputs/textarea
-      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-      if (tag === "input" || tag === "textarea" || (e.target as HTMLElement)?.isContentEditable) return;
-
-      if (e.code === "Space") {
-        e.preventDefault();
-        alternarPlayPausa();
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault();
-        adelantar(SALTO_SEGUNDOS);
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        retroceder(SALTO_SEGUNDOS);
-      } else if (e.key.toLowerCase() === "m") {
-        e.preventDefault();
-        setMuteado((m) => !m);
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setVolumen((v) => Math.min(100, v + 5));
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setVolumen((v) => Math.max(0, v - 5));
-      }
-    };
+    if (!mostrarVisualizador) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMostrarVisualizador(false);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, [mostrarVisualizador]);
+
+  const abrirVisualizador = () => setMostrarVisualizador(true);
+  const cerrarVisualizador = () => setMostrarVisualizador(false);
+
+  /* =========================================== */
+
+  useEffect(() => {
+    let desmontado = false;
+    (async () => {
+      await cargarAPIYouTube();
+      if (desmontado) return;
+
+      reproductorRef.current = new window.YT.Player(hostReproductorRef.current!, {
+        width: 0,
+        height: 0,
+        videoId: LISTA_REPRODUCCION[indiceActual].id,
+        playerVars: { controls: 0, modestbranding: 1, rel: 0, fs: 0, enablejsapi: 1 },
+        events: {
+          onReady: (e: any) => {
+            const d = e.target.getDuration?.() || 0;
+            if (d) setDuracion(d);
+            // aplicar estado de volumen/mute inicial
+            const vol0a100 = Math.round((muted ? 0 : volumen) * 100);
+            if (muted || vol0a100 <= 0) { e.target.mute?.(); e.target.setVolume?.(0); }
+            else { e.target.unMute?.(); e.target.setVolume?.(vol0a100); }
+          },
+          onStateChange: (e: any) => {
+            const ESTADO = window.YT.PlayerState;
+            if (e.data === ESTADO.PLAYING) setEstaReproduciendo(true);
+            if (e.data === ESTADO.PAUSED || e.data === ESTADO.ENDED) setEstaReproduciendo(false);
+            if (e.data === ESTADO.ENDED) pistaSiguiente(true);
+          },
+        },
+      });
+
+      iniciarPollingProgreso();
+      actualizarMetadatos();
+    })();
+
+    return () => {
+      desmontado = true;
+      detenerPollingProgreso();
+      try { reproductorRef.current?.destroy?.(); } catch {}
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Lógica del overlay de imágenes (slide cada 5s, pausado si no reproduciendo)
-  useEffect(() => {
-    const limpiarIntervalo = () => {
-      if (intervaloSlideRef.current) {
-        window.clearInterval(intervaloSlideRef.current);
-        intervaloSlideRef.current = null;
-      }
-    };
-
-    if (overlayAbierto && reproduciendo && urlsImagenes.length > 0) {
-      limpiarIntervalo();
-      intervaloSlideRef.current = window.setInterval(() => {
-        indiceImagen.current = (indiceImagen.current + 1) % urlsImagenes.length;
-        setUrlImagenActual(urlsImagenes[indiceImagen.current]);
-      }, 5000) as unknown as number;
-    } else {
-      limpiarIntervalo();
-    }
-
-    return () => limpiarIntervalo();
-  }, [overlayAbierto, reproduciendo, urlsImagenes]);
-
-  // Si el array de imágenes cambia “en caliente”, no cortamos el overlay; nos adaptamos
-  useEffect(() => {
-    if (urlsImagenes.length > 0) {
-      // si el índice actual quedó fuera, reencuadrar
-      indiceImagen.current = indiceImagen.current % urlsImagenes.length;
-      setUrlImagenActual(urlsImagenes[indiceImagen.current]);
-    }
-  }, [urlsImagenes]);
-
-  // Handlers UI
-  const alternarPlayPausa = () => {
-    const pc = refPlayerActual.current;
-    if (!pc) return;
-    try {
-      const estado = pc.getPlayerState?.();
-      if (estado === window.YT.PlayerState.PLAYING) {
-        pc.pauseVideo();
-        setReproduciendo(false);
-      } else {
-        pc.playVideo();
-        setReproduciendo(true);
-      }
-    } catch (_) {}
+  const iniciarPollingProgreso = () => {
+    if (idIntervaloProgresoRef.current != null) return;
+    idIntervaloProgresoRef.current = window.setInterval(() => {
+      const p = reproductorRef.current;
+      if (!p) return;
+      const t = p.getCurrentTime?.() || 0;
+      const d = p.getDuration?.() || duracion;
+      setTiempoActual(t);
+      if (d && d !== duracion) setDuracion(d);
+    }, 250) as unknown as number;
   };
-
-  const manejarSiguiente = () => {
-    const siguienteValido = buscarIndiceValido(indiceActual, 1);
-    if (siguienteValido !== null) {
-      setIndiceActual(siguienteValido);
-    } else {
-      setReproduciendo(false);
+  const detenerPollingProgreso = () => {
+    if (idIntervaloProgresoRef.current != null) {
+      clearInterval(idIntervaloProgresoRef.current);
+      idIntervaloProgresoRef.current = null;
     }
   };
 
-  const manejarAnterior = () => {
-    const anteriorValido = buscarIndiceValido(indiceActual, -1);
-    if (anteriorValido !== null) {
-      setIndiceActual(anteriorValido);
-    }
-  };
+  function cambiarPista(nuevoIndice: number, autoplay = true) {
+    const total = LISTA_REPRODUCCION.length;
+    const idx = (nuevoIndice + total) % total;
+    setIndiceActual(idx);
+    setTiempoActual(0);
 
-  const adelantar = (seg: number) => {
-    const pc = refPlayerActual.current;
-    if (!pc) return;
-    try {
-      const t = pc.getCurrentTime?.() || 0;
-      pc.seekTo(t + seg, true);
-    } catch (_) {}
-  };
-
-  const retroceder = (seg: number) => {
-    const pc = refPlayerActual.current;
-    if (!pc) return;
-    try {
-      const t = pc.getCurrentTime?.() || 0;
-      pc.seekTo(Math.max(0, t - seg), true);
-    } catch (_) {}
-  };
-
-  const manejarClickProgreso = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const ratio = Math.min(1, Math.max(0, x / rect.width));
-    const nuevoSegundo = Math.floor(ratio * (duracionTotal || 0));
-    const pc = refPlayerActual.current;
-    try { pc?.seekTo?.(nuevoSegundo, true); } catch (_) {}
-  };
-
-  const manejarCambioVolumen = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = Number(e.target.value);
-    setVolumen(v);
-    if (v === 0) setMuteado(true);
-    if (v > 0 && muteado) setMuteado(false);
-  };
-
-  const portadaActual = obtenerMiniatura(idActual || undefined);
-
-  // Estado vacío
-  if (!idsCanciones || idsCanciones.length === 0) {
-    return (
-      <div className="mp-contenedor-vacio" style={{ height: ALTURA_REPRODUCTOR_PX }}>
-        <div className="mp-vacio">No hay canciones disponibles</div>
-      </div>
-    );
+    reproductorRef.current?.loadVideoById?.(LISTA_REPRODUCCION[idx].id);
+    if (!autoplay) reproductorRef.current?.pauseVideo?.();
+    actualizarMetadatos(idx);
   }
+
+  const pistaSiguiente = (autoplay = true) => cambiarPista(indiceActual + 1, autoplay);
+  const pistaAnterior = (autoplay = true) => cambiarPista(indiceActual - 1, autoplay);
+
+  const alternarPlayPause = () => {
+    const p = reproductorRef.current;
+    if (!p) return;
+    const ESTADO = window.YT.PlayerState;
+    const estado = p.getPlayerState?.();
+    if (estado === ESTADO.PLAYING) p.pauseVideo?.();
+    else p.playVideo?.();
+  };
+
+  const onCambiarProgreso = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = Number(e.target.value) || 0;
+    const nuevo = Math.min(1, Math.max(0, v));
+    const segundos = (duracion || 0) * nuevo;
+    reproductorRef.current?.seekTo?.(segundos, true);
+    setTiempoActual(segundos);
+  };
+
+  async function actualizarMetadatos(idx = indiceActual) {
+    try {
+      const videoId = LISTA_REPRODUCCION[idx].id;
+      const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+      const resp = await fetch(oembedUrl);
+      const data = await resp.json();
+      setTituloPista(data.title || "Sin título");
+      setAutorPista(data.author_name || "");
+      setMiniaturaPista(data.thumbnail_url || "");
+    } catch {
+      setTituloPista("Reproduciendo...");
+      setAutorPista("");
+      setMiniaturaPista("");
+    }
+  }
+
+  useEffect(() => {
+    actualizarMetadatos(indiceActual);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [indiceActual]);
+
+  const progreso = duracion ? Math.min(1, Math.max(0, tiempoActual / duracion)) : 0;
 
   return (
     <>
-      {/* Iframes ocultos */}
-      <div className="mp-iframes-ocultos" aria-hidden>
-        <div ref={refContenedorAnterior} />
-        <div ref={refContenedorActual} />
-        <div ref={refContenedorSiguiente} />
-      </div>
+      <div ref={hostReproductorRef} style={{ position: "absolute", width: 0, height: 0, overflow: "hidden", opacity: 0 }} aria-hidden="true" />
 
-      {/* Overlay visualizador de imágenes */}
-      {overlayAbierto && (
-        <div
-          className="mp-overlay"
-          style={{ height: `calc(100vh - ${ALTURA_REPRODUCTOR_PX}px)` }}
-        >
-          <div className="mp-overlay-fondo" />
-          <div className="mp-overlay-contenido">
-            <div className="mp-overlay-slider" key={urlImagenActual}>
-              <img src={urlImagenActual} alt="visual" className="mp-overlay-img" />
+      {mostrarVisualizador && (
+        <div className="Reproductor__VisualizadorOverlay" onClick={cerrarVisualizador} role="dialog" aria-modal="true">
+          <div className="Reproductor__VisualizadorContenido" onClick={(e) => e.stopPropagation()}>
+            <div className={`Reproductor__VisualizadorSlider ${animandoSlide ? "is-animating" : ""}`}>
+              {animandoSlide && imagenesEfectivas.length > 1 && (
+                <img
+                  key={`prev-${indicePrevioRef.current}-${imagenesEfectivas[indicePrevioRef.current] || "ph"}`}
+                  src={imagenesEfectivas[indicePrevioRef.current] || undefined}
+                  alt=""
+                  className="Reproductor__Slide Reproductor__Slide--out"
+                  draggable={false}
+                />
+              )}
+              <img
+                key={`cur-${indiceImagen}-${imagenesEfectivas[indiceImagen] || "ph"}`}
+                src={imagenesEfectivas[indiceImagen] || undefined}
+                alt=""
+                className="Reproductor__Slide Reproductor__Slide--in"
+                draggable={false}
+              />
             </div>
-            <button className="mp-overlay-cerrar" onClick={() => setOverlayAbierto(false)} aria-label="Cerrar visualizador">
-              ✕
-            </button>
           </div>
         </div>
       )}
 
-      {/* Barra reproductor */}
-      <div className="mp-root" style={{ height: ALTURA_REPRODUCTOR_PX }}>
-        <div className="mp-barra">
-          {/* Izquierda: portada + info */}
-          <div className="mp-info">
-            <div className="mp-portada">
-              {portadaActual ? (
-                <img src={portadaActual} alt="portada" />
-              ) : (
-                <div className="mp-portada-placeholder" />
-              )}
-            </div>
-            <div className="mp-titulos">
-              <div className="mp-titulo" title={tituloCancion || "Canción"}>
-                {tituloCancion || "Canción actual"}
-              </div>
-              <div className="mp-autor" title={autorCancion || "Autor"}>
-                {autorCancion || "Autor"}
-              </div>
-              {nombrePlaylist && (
-                <div className="mp-playlist" title={nombrePlaylist}>
-                  {nombrePlaylist}
-                </div>
-              )}
-            </div>
+      <div className="Reproductor__ContenedorPrincipal">
+        <nav className="Reproductor__ZonaIzquierda">
+          <div className="Reproductor__ContenedorMiniatura" onClick={abrirVisualizador} title="Abrir visualizador de imágenes">
+            {miniaturaPista && (
+              <img
+                src={miniaturaPista}
+                alt={tituloPista ? `Portada: ${tituloPista}` : "Portada"}
+                className="Reproductor__ImagenMiniatura"
+                loading="eager"
+                decoding="async"
+                draggable={false}
+              />
+            )}
           </div>
-
-          {/* Centro: controles + progreso */}
-          <div className="mp-centro">
-            <div className="mp-controles">
-              <button className="mp-btn" onClick={manejarAnterior} aria-label="Anterior">
-                {/* Icono Prev */}
-                <svg width="20" height="20" viewBox="0 0 24 24"><path d="M6 6h2v12H6zM9 12l10-6v12z"/></svg>
-              </button>
-              <button className="mp-btn mp-btn-play" onClick={alternarPlayPausa} aria-label="Play/Pause">
-                {/* Iconos Play/Pause */}
-                {reproduciendo ? (
-                  <svg width="24" height="24" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                ) : (
-                  <svg width="24" height="24" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                )}
-              </button>
-              <button className="mp-btn" onClick={manejarSiguiente} aria-label="Siguiente">
-                {/* Icono Next */}
-                <svg width="20" height="20" viewBox="0 0 24 24"><path d="M6 6l10 6-10 6V6zm12 0h2v12h-2z"/></svg>
-              </button>
-              <button className="mp-btn" onClick={() => setOverlayAbierto((v) => !v)} aria-label="Visualizador de imágenes">
-                {/* Icono Imagenes */}
-                <svg width="20" height="20" viewBox="0 0 24 24"><path d="M21 19V5H3v14h18zM5 7h14v8l-4-4-3 3-2-2L5 17V7z"/></svg>
-              </button>
-            </div>
-
-            <div className="mp-progreso" onClick={manejarClickProgreso} role="progressbar" aria-valuemin={0} aria-valuemax={duracionTotal} aria-valuenow={segundosActuales}>
-              <div className="mp-tiempo">{segundosAmmss(segundosActuales)}</div>
-              <div className="mp-barra-progreso">
-                <div
-                  className="mp-barra-progreso-llenado"
-                  style={{ width: `${Math.min(100, (segundosActuales / (duracionTotal || 1)) * 100)}%` }}
-                />
-              </div>
-              <div className="mp-tiempo">{segundosAmmss(duracionTotal)}</div>
-            </div>
+          <div className="Reproductor__ContenedorInfoPista">
+            <div className="Reproductor__TituloPista">{tituloPista}</div>
+            <div className="Reproductor__AutorPista">{autorPista}</div>
           </div>
+        </nav>
 
-          {/* Derecha: volumen */}
-          <div className="mp-derecha">
-            <button className="mp-btn" onClick={() => setMuteado((m) => !m)} aria-label="Mute">
-              {muteado || volumen === 0 ? (
-                <svg width="20" height="20" viewBox="0 0 24 24"><path d="M16.5 12l3.5 3.5-1.5 1.5L15 13.5 11.5 17H8v-6h3.5L15 7.5 18.5 11l1.5-1.5L16.5 6l-3 3-1-1-4 4H6v6h2l4-4 1 1 3-3z"/></svg>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.74 2.5-2.26 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-              )}
+        <nav className="Reproductor__ZonaCentral">
+          <div className="Reproductor__ContenedorControles">
+            <button className="Reproductor__BotonControl" onClick={() => cambiarPista(indiceActual - 1, true)} aria-label="Anterior">
+              <Icon.Prev />
             </button>
+            <button className="Reproductor__BotonControl" onClick={alternarPlayPause} aria-label={estaReproduciendo ? "Pausar" : "Reproducir"}>
+              {estaReproduciendo ? <Icon.Pause /> : <Icon.Play />}
+            </button>
+            <button className="Reproductor__BotonControl" onClick={() => cambiarPista(indiceActual + 1, true)} aria-label="Siguiente">
+              <Icon.Next />
+            </button>
+          </div>
+          <div className="Reproductor__ContenedorProgreso">
+            <div className="Reproductor__Tiempo Reproductor__TiempoActual">{formatearTiempo(tiempoActual)}</div>
             <input
-              className="mp-volumen"
               type="range"
               min={0}
-              max={100}
-              value={volumen}
-              onChange={manejarCambioVolumen}
-              aria-label="Control de volumen"
+              max={1}
+              step={0.001}
+              value={progreso}
+              onChange={onCambiarProgreso}
+              className="Reproductor__BarraProgreso"
+              aria-label="Barra de progreso"
             />
+            <div className="Reproductor__Tiempo Reproductor__TiempoTotal">{formatearTiempo(duracion)}</div>
           </div>
-        </div>
+        </nav>
+
+        <nav className="Reproductor__ZonaDerecha">
+          {/* Botón de mute/unmute con icono dinámico */}
+          <button
+            type="button"
+            className="Reproductor__VolumenBtn"
+            onClick={alternarMute}
+            aria-label={muted || volumen === 0 ? "Activar sonido" : "Silenciar"}
+            title={muted || volumen === 0 ? "Activar sonido" : "Silenciar"}
+          >
+            <VolumeIcon />
+          </button>
+
+          {/* Slider de volumen */}
+          <input
+            className="Reproductor__VolumenRange"
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={volumen}
+            onChange={onCambiarVolumen}
+            aria-label="Control de volumen"
+          />
+
+          <div className="Reproductor__ControlLista" title="Lista" aria-hidden="true"><Icon.List /></div>
+          <div className="Reproductor__ControlImagenesIA" onClick={abrirVisualizador} title="Visualizador IA" aria-hidden="true">
+            <Icon.Image />
+          </div>
+        </nav>
       </div>
     </>
   );
 }
-
