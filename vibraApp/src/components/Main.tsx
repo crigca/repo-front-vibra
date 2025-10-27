@@ -13,6 +13,7 @@ import { Follows } from "./SubsPage/Follows";
 /* Components - Nueva funcionalidad de búsqueda */
 import SearchSection from "./SearchSection";
 import ResultsSection from "./ResultsSection";
+import DiscoverMusic from "./DiscoverMusic";
 
 /* types */
 import type {SearchProps} from "../types/searchProps";
@@ -114,6 +115,8 @@ const Main = () => {
               <SearchSection/>
               <ResultsSection/>
             </SearchContext.Provider>
+
+            <DiscoverMusic/>
           </main>
         } />
 
