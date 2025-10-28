@@ -13,34 +13,34 @@ import type {SearchProps} from "../types/searchProps";
 import type {SearchSectionProps} from "../types/searchSectionProps";
 
 /* hooks */
-import SearchContext from "../context/searchContext";
-import {useSearchContext} from "../context/searchContext";
+import SearchContext from "../hooks/searchContext";
 
 /* Components */
 
 /* styles */
-import "./search-section.css"
 
 // const SearchSection =(props:SearchSectionProps) => {
 const SearchSection =() => {
 
-  const {dataToSearch,toResoult} = useSearchContext();
+  const {dataToSearch,toResoult} = useContext(SearchContext);
   const [valueCurrent, setValueCurrent]:[string,any] = useState("");
   const [trent, setTrent]:[DynamicProps[],any] = useState([]);
   const URL="/data/data.json";
   const ENTITY='/trent';
   useEffect(() => {
-    
+
     fetch(URL)
       .then(response => response.json())
       .then(data => {
         console.log(data);
         //console.log(data.subjets);
-        setTrent(data.trent);
+        // Usar 'most' en lugar de 'trent' que no existe en el JSON
+        setTrent(data.most || []);
         //console.log(subjets);
       })
       .catch(error => {
         console.log('Error fetching data:', error);
+        setTrent([]); // Inicializar con array vacío en caso de error
       });
 
   }, []);// on render
@@ -57,8 +57,8 @@ const SearchSection =() => {
 
   /* auto complete and search */
   const handleInputChange = (event:any) => {
-      event.preventDefault();
-      setValueCurrent(event.target["search"].value);
+      // En onChange el target es el input directamente, no el form
+      setValueCurrent(event.target.value);
   };
 
   const handleClickSuggestion = (event:any) => {
@@ -88,31 +88,25 @@ const renderSuggestion = (datum:DynamicProps) => {
       <section className="search-section">
           <div className="welcome-text">
               <h1 className="welcome-title">¿Qué quieres escuchar hoy?</h1>
-              <p className="welcome-subtitle">Busca cualquier canción y disfruta de visualizaciones únicas generadas por IA</p>
           </div>
 
           <div className="search-container">
               <form className="search-form" onSubmit={handleSearchSubmit}>
-                  <input 
+                  <input
                       type="text"
-                      className="search-input" 
-                      placeholder="Buscar canciones, artistas, álbumes..." 
+                      className="search-input"
+                      placeholder="Buscar por artista o canción..."
                       id="searchInput"
                       autoComplete="off"
                       onChange={handleInputChange}
                       value={valueCurrent}
                       name="search"
-                  > </input>
-                  
-                  <button  type="submit" className="search-btn" id="searchBtn">
-                    <span>🔍</span>
+                  />
+
+                  <button type="submit" className="search-btn" id="searchBtn">
                     Buscar
                   </button>
               </form>
-              
-              <div className="search-suggestions">
-                {trent.map(renderSuggestion)}                    
-              </div>
           </div>
       </section>
     </>
