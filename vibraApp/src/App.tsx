@@ -4,15 +4,18 @@ import { MusicPlayer } from './components/MusicPlayer'
 import { Sidebar } from './components/Sidebar'
 import { Waves } from './components/Waves'
 import MusicProvider from './context/MusicProvider';
+import { UserProvider } from './context/currentUserContext'
 
 function App() {
   return (
+    <UserProvider>
       <MusicProvider>
         <Waves />
         <Sidebar />
         <Main />
         <MusicPlayer />
       </MusicProvider>
+    </UserProvider>
   );
 }
 
