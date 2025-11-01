@@ -55,14 +55,7 @@ const ResultsSection =() => {
 
       switch (state) {
         case "init":
-            return( <>
-                <div className="empty-state">
-                  <div className="icon">🎵</div>
-                  <h3>Busca tu música favorita</h3>
-                  <p>Usa el buscador de arriba para encontrar canciones y crear visualizaciones únicas</p>
-                </div>
-              </>
-            );
+            return null;
           break;
         case "result":
             var data:ResultProps=dataFromSearch;
@@ -70,15 +63,13 @@ const ResultsSection =() => {
             return (
               <div id="" className="results-grid">
                 <div className="result-card" data-track-id={data.id}>
-                  <div className="result-thumbnail">🎵</div>
+                  <div className="result-thumbnail"></div>
                   <div className="result-info">
                     <h3 className="result-title">{data.title}</h3>
                     <p className="result-artist">{data.artist}</p>
-                    <p className="result-duration">{data.duration}</p>
+                    <p className="result-duration">{data.duration}s</p>
                     <button className="play-btn" onClick={handleClickPlayTrack}>
-                    {/* <button className="play-btn" onClick={props.playTrack(data.id,data.title,data.artist)}> */}
-                      <span>▶️</span>
-                      Reproducir con IA
+                      Reproducir
                     </button>
                   </div>
                 </div>
@@ -90,14 +81,14 @@ const ResultsSection =() => {
               <div className="results-grid">
                 { dataFromSearch.map((datum:ResultProps) =>
                     <div key={datum.id} className="result-card" data-track-id={datum.id}>
-                      <div className="result-thumbnail">🎵</div>
+                      <div className="result-thumbnail"></div>
                       <div className="result-info">
                         <h3 className="result-title">{datum.title}</h3>
                         <p className="result-artist">{datum.artist}</p>
-                        <p className="result-duration">{datum.duration}</p>
+                        <p className="result-duration">{datum.duration}s</p>
                         <button className="play-btn" onClick={handleClickPlayTrack}>
-                        <span>▶️</span>Reproducir con IA</button>
-                        {/* <button className="play-btn" onClick={props.playTrack(data.id,data.title,data.artist)}> */}
+                          Reproducir
+                        </button>
                       </div>
                     </div>
                   ) }
@@ -105,12 +96,7 @@ const ResultsSection =() => {
             ;
           break;
         case "notFound":
-          return (
-            <div className="empty-state">
-                <div className="icon">😔</div>
-                <h3>No se encontraron resultados</h3>
-                <p>Intenta con otros términos de búsqueda</p>
-            </div>);
+          return null;
           break;
       
         default:
