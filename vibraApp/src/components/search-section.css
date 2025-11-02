@@ -92,6 +92,26 @@
     cursor: not-allowed;
 }
 
+.search-btn--searching {
+    animation: searchPulse 0.3s ease-out;
+    box-shadow: 0 0 30px rgba(160, 120, 255, 0.8) !important;
+}
+
+@keyframes searchPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(160, 120, 255, 0.3);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 30px rgba(160, 120, 255, 0.8);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(160, 120, 255, 0.3);
+    }
+}
+
 .search-suggestions {
     display: flex;
     flex-wrap: wrap;
