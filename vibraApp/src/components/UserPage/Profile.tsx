@@ -10,6 +10,7 @@ import { ConfirmModal } from '../ConfirmModal/ConfirmModal';
 import { Toast } from '../Toast/Toast';
 import type { ToastType } from '../Toast/Toast';
 import { ConfigUserModal } from './configUserModal/configUserModal';
+import { FollowModal } from './followModal/FollowModal';
 import type { Song } from '../../types';
 
 interface User {
@@ -43,10 +44,11 @@ export function Profile() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [canViewHistory, setCanViewHistory] = useState(true);
   const [reasonHistory, setReasonHistory] = useState<string>();
-
+  const [isFollowModalOpen, setIsFollowModalOpen]=useState(false)
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<ToastType>('success');
   const [isToastVisible, setIsToastVisible] = useState(false);
+  const [followModalType, setFollowModalType]=useState<"followers" | "following">("following")
 
   const context = useContext(UserContext);
   if (!context) throw new Error("UserContext must be used inside a UserProvider");
@@ -298,11 +300,11 @@ export function Profile() {
           </div>
 
           <div className="followStats">
-            <div className="stat">
+            <div className="stat" onClick={()=>{setIsFollowModalOpen(true); setFollowModalType("following")}}>
               <p className="statLabel">Seguidos</p>
               <p className="statNumber">{profile.followingCount}</p>
             </div>
-            <div className="stat">
+            <div className="stat" onClick={()=>{setIsFollowModalOpen(true); setFollowModalType("followers")}}>
               <p className="statLabel">Seguidores</p>
               <p className="statNumber">{profile.followersCount}</p>
             </div>
@@ -422,6 +424,21 @@ export function Profile() {
           setProfile(updatedUser);
           if (user && user.id === updatedUser.id) {
             user.username = updatedUser.username;
+          }
+        }}
+      />
+
+      <FollowModal
+        isOpen={isFollowModalOpen}
+        onClose={()=>setIsFollowModalOpen(false)}
+        type={followModalType}
+        targetUserId={userId!}
+        currentUserId={user?.id}
+        onFollowChange={(isFollowing) => {
+          if (isFollowing) {
+            setProfile(prev => prev ? { ...prev, followingCount: prev.followingCount + 1 } : prev);
+          } else {
+            setProfile(prev => prev ? { ...prev, followingCount: prev.followingCount - 1 } : prev);
           }
         }}
       />
