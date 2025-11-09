@@ -3,27 +3,29 @@
  */
 
 /* Dependencies  */
-import { useContext, useEffect, useState } from "react";
+import {useEffect, useState } from "react";
 
 /* hooks */
-import SearchContext from "../hooks/searchContext";
+import {useSearchContext} from "../hooks/useSearchContext";
 
 /* styles */
 import './search-section.css';
 
 const SearchSection = () => {
-  const { dataToSearch } = useContext(SearchContext);
   const [valueCurrent, setValueCurrent] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
+  const {toSearch} = useSearchContext();
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (!target.closest('.search-container')) {
         setShowSuggestions(false);
+        setSuggestions([]);
       }
     };
 
@@ -36,23 +38,31 @@ const SearchSection = () => {
     };
   }, [showSuggestions]);
 
-  const handleSearchSubmit = (event:any) => {
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    setIsSearching(true);
-    setTimeout(() => {
-      setIsSearching(false);
-    }, 300);
+    const searchValue = valueCurrent.trim();
+    if (searchValue.length === 0) return;
 
-    if(event.target["search"].value.length) {
-      dataToSearch({search:event.target["search"].value});
+    // Ocultar sugerencias y limpiarlas inmediatamente
+    setSuggestions([]);
+    setShowSuggestions(false);
+
+    // Quitar foco del input para prevenir eventos adicionales
+    const inputElement = document.getElementById('searchInput') as HTMLInputElement;
+    if (inputElement) {
+      inputElement.blur();
     }
-    setValueCurrent(event.target["search"].value);
+
+    setIsSearching(true);
+    toSearch({search: searchValue});
+    setTimeout(() => setIsSearching(false), 300);
   };
 
   const handleInputChange = async (event:any) => {
       const value = event.target.value;
       setValueCurrent(value);
+
       if (value.length >= 2) {
         setIsLoadingSuggestions(true);
 
@@ -84,11 +94,16 @@ const SearchSection = () => {
     setValueCurrent(suggestion);
     setSuggestions([]);
     setShowSuggestions(false);
-    dataToSearch({search: suggestion});
+    toSearch({search: suggestion});
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Escape') {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      event.currentTarget.blur();
+    } else if (event.key === 'Enter') {
+      setSuggestions([]);
       setShowSuggestions(false);
     }
   };

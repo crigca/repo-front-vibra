@@ -11,6 +11,7 @@ import { Toast } from '../Toast/Toast';
 import type { ToastType } from '../Toast/Toast';
 import { ConfigUserModal } from './configUserModal/configUserModal';
 import { FollowModal } from './followModal/FollowModal';
+import type { Song } from '../../types';
 
 interface User {
   profileImage: string;
@@ -19,20 +20,6 @@ interface User {
   email: string;
   followingCount: number;
   followersCount: number;
-}
-
-interface Song {
-  id: string;
-  title: string;
-  artist: string;
-  youtubeId: string;
-  duration: number;
-  genre?: string;
-  viewCount?: number;
-  publishedAt?: Date;
-  cloudinaryUrl?: string;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 interface History {
@@ -51,7 +38,6 @@ export function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const [profile, setProfile] = useState<User | null>(null);
   const [userHistory, setUserHistory] = useState<History[]>([]);
-  const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [songToDelete, setSongToDelete] = useState<SongToDelete | null>(null);
@@ -69,7 +55,7 @@ export function Profile() {
   const { user } = context;
 
   const [userModalOpen, setUserModalOpen] = useState<boolean>(false);
-  const { playSong } = useMusicContext();
+  const { playSong, setCurrentPlaylistId, currentSong, currentPlaylistId } = useMusicContext();
 
   // 🔁 Reutilizable: carga el historial
   const fetchHistory = async (userId: string) => {
@@ -88,6 +74,11 @@ export function Profile() {
       setUserHistory([]);
     }
   };
+
+  // Scroll al inicio cuando se monta el componente
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   useEffect(() => {
   if (!userId) return;
@@ -212,8 +203,14 @@ export function Profile() {
   };
 
   const handleItemClick = (song: Song) => {
-    playSong(song);
-    setSelectedSongId(song.id || song.youtubeId);
+    // Convertir History[] a Song[] para pasar como playlist
+    // Filtrar tanto undefined como null
+    const historySongs = userHistory
+      .map(h => h.song)
+      .filter((s): s is Song => s !== undefined && s !== null);
+
+    setCurrentPlaylistId("history");
+    playSong(song, historySongs);
   };
 
   const handleDeletePlaylist = (song: SongToDelete) => {
@@ -284,6 +281,24 @@ export function Profile() {
         </div>
         <div className="profileInfo">
           <h2 className="username">{profile.username}</h2>
+
+          {/* Botones pequeños debajo del nombre */}
+          <div className="profileActions">
+            <button
+              className="actionBtn editBtn"
+              onClick={() => (isOwnProfile ? setUserModalOpen(true) : handleFollow())}
+            >
+              {isOwnProfile
+                ? "Editar Perfil"
+                : isFollowing
+                ? "Dejar de seguir"
+                : "Seguir"}
+            </button>
+            <button className="actionBtn shareBtn" onClick={handleShare}>
+              <FontAwesomeIcon icon={faShare} />
+            </button>
+          </div>
+
           <div className="followStats">
             <div className="stat" onClick={()=>{setIsFollowModalOpen(true); setFollowModalType("following")}}>
               <p className="statLabel">Seguidos</p>
@@ -295,22 +310,6 @@ export function Profile() {
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="profileActions">
-        <button
-          className="actionBtn editBtn"
-          onClick={() => (isOwnProfile ? setUserModalOpen(true) : handleFollow())}
-        >
-          {isOwnProfile
-            ? "Editar Perfil"
-            : isFollowing
-            ? "Dejar de seguir"
-            : "Seguir"}
-        </button>
-        <button className="actionBtn shareBtn" onClick={handleShare}>
-          <FontAwesomeIcon icon={faShare} />
-        </button>
       </div>
 
       <div className="contentSections">
@@ -330,7 +329,7 @@ export function Profile() {
                 ) : (
                   userHistory.map((item) => {
                     const isPlaying =
-                      selectedSongId === (item.song?.id || item.song?.youtubeId);
+                      currentSong?.id === item.song?.id && currentPlaylistId === "history";
                     return (
                       <div
                         key={item.id}
