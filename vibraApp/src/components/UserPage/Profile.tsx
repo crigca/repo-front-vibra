@@ -10,8 +10,9 @@ import { ConfirmModal } from '../ConfirmModal/ConfirmModal';
 import { Toast } from '../Toast/Toast';
 import type { ToastType } from '../Toast/Toast';
 import { ConfigUserModal } from './configUserModal/configUserModal';
+import { FollowModal } from './followModal/FollowModal';
 import type { Song } from '../../types';
-// Removed formatArtist and formatTitle - now showing raw data from DB
+import { NavLink } from 'react-router-dom';
 
 interface User {
   profileImage: string;
@@ -44,10 +45,11 @@ export function Profile() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [canViewHistory, setCanViewHistory] = useState(true);
   const [reasonHistory, setReasonHistory] = useState<string>();
-
+  const [isFollowModalOpen, setIsFollowModalOpen]=useState(false)
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<ToastType>('success');
   const [isToastVisible, setIsToastVisible] = useState(false);
+  const [followModalType, setFollowModalType]=useState<"followers" | "following">("following")
 
   const context = useContext(UserContext);
   if (!context) throw new Error("UserContext must be used inside a UserProvider");
@@ -59,7 +61,7 @@ export function Profile() {
   // 🔁 Reutilizable: carga el historial
   const fetchHistory = async (userId: string) => {
     try {
-      const resHistory = await fetch(`http://localhost:3000/user-history/user/${userId}`);
+      const resHistory = await fetch(`http://localhost:3000/user-history/user/${userId}/limited`);
       if (!resHistory.ok) throw new Error('Error fetching user history');
       const historyData = await resHistory.json();
       const normalizedHistory = Array.isArray(historyData)
@@ -299,11 +301,11 @@ export function Profile() {
           </div>
 
           <div className="followStats">
-            <div className="stat">
+            <div className="stat" onClick={()=>{setIsFollowModalOpen(true); setFollowModalType("following")}}>
               <p className="statLabel">Seguidos</p>
               <p className="statNumber">{profile.followingCount}</p>
             </div>
-            <div className="stat">
+            <div className="stat" onClick={()=>{setIsFollowModalOpen(true); setFollowModalType("followers")}}>
               <p className="statLabel">Seguidores</p>
               <p className="statNumber">{profile.followersCount}</p>
             </div>
@@ -319,7 +321,10 @@ export function Profile() {
         ) : (
           <div>
             <div className="section">
-              <h3 className="sectionTitle">Historial</h3>
+              <div className='section-titles'>
+                <h3 className="sectionTitle">Historial</h3>
+                <NavLink to={`/user/${userId}/song-history`}> Ver más</NavLink>
+              </div>
               <div className="itemsGrid">
                 {userHistory.length === 0 ? (
                   <p className="empty-message">
@@ -423,6 +428,21 @@ export function Profile() {
           setProfile(updatedUser);
           if (user && user.id === updatedUser.id) {
             user.username = updatedUser.username;
+          }
+        }}
+      />
+
+      <FollowModal
+        isOpen={isFollowModalOpen}
+        onClose={()=>setIsFollowModalOpen(false)}
+        type={followModalType}
+        targetUserId={userId!}
+        currentUserId={user?.id}
+        onFollowChange={(isFollowing) => {
+          if (isFollowing) {
+            setProfile(prev => prev ? { ...prev, followingCount: prev.followingCount + 1 } : prev);
+          } else {
+            setProfile(prev => prev ? { ...prev, followingCount: prev.followingCount - 1 } : prev);
           }
         }}
       />
