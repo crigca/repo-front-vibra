@@ -1,0 +1,407 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import type { Song } from "../types";
+import { UserContext } from "./currentUserContext";
+import { useImages } from "../hooks/useImages";
+
+export type Track = Partial<Song> & {
+  youtubeId: string;
+  title: string;
+};
+
+export type MusicContextValue = {
+  idsCanciones: string[];
+  indiceActual: number;
+  setIndiceActual: (indice: number) => void;
+  urlsImagenes: string[];
+  nombrePlaylist?: string;
+  reproduciendo: boolean;
+  setReproduciendo: (valor: boolean) => void;
+  playlist: Song[];
+  currentSong: Song | null;
+  playSong: (song: Song, songs?: Song[]) => void;
+  loadSong: (song: Song, songs?: Song[]) => void;
+  updatePlaylist: (songs: Song[]) => void; // Nueva función para solo actualizar playlist
+  randomSongs: Song[];
+  setRandomSongs: (songs: Song[]) => void;
+  currentPlaylistId: string | null;
+  setCurrentPlaylistId: (id: string | null) => void;
+
+  // 🔎 Estado de imágenes (hook useImages)
+  imagesLoading: boolean;
+  imagesError: string | null;
+};
+
+const MusicContext = createContext<MusicContextValue | undefined>(undefined);
+
+type MusicProviderProps = {
+  children: ReactNode;
+  songs?: Track[];
+  images?: string[];
+  playlistName?: string;
+  startIndex?: number;
+};
+
+const crearIdPista = (track: Track, index: number) =>
+  track.id ?? `${track.youtubeId}-${index}`;
+
+const normalizarTrack = (track: Track, index: number): Song => ({
+  id: crearIdPista(track, index),
+  title: track.title,
+  artist: track.artist ?? "Artista desconocido",
+  youtubeId: track.youtubeId,
+  duration: track.duration ?? 0,
+  genre: track.genre,
+  viewCount: track.viewCount,
+  publishedAt: track.publishedAt,
+  cloudinaryUrl: track.cloudinaryUrl,
+  createdAt: track.createdAt,
+  updatedAt: track.updatedAt,
+});
+
+const normalizarCancion = (song: Song): Song => {
+  if (!song) {
+    throw new Error("Cannot normalize null/undefined song");
+  }
+  return {
+    ...song,
+    id: song.id ?? song.youtubeId,
+    artist: song.artist ?? "Artista desconocido",
+    duration: song.duration ?? 0,
+  };
+};
+
+const coincidenCanciones = (a: Song, b: Song) => {
+  if (a.id && b.id) {
+    return a.id === b.id;
+  }
+  return a.youtubeId === b.youtubeId;
+};
+
+const generarMiniatura = (song: Song) =>
+  song.cloudinaryUrl ?? `https://img.youtube.com/vi/${song.youtubeId}/hqdefault.jpg`;
+
+
+  export const MusicProvider = ({
+    children,
+    songs = [],
+    images = [],
+    playlistName,
+    startIndex = 0,
+  }: MusicProviderProps) => {
+    const pistasIniciales = useMemo(
+      () => songs.map((track, index) => normalizarTrack(track, index)),
+      [songs]
+    );
+
+    const [playlist, setPlaylistState] = useState<Song[]>(pistasIniciales);
+    const playlistRef = useRef<Song[]>(pistasIniciales);
+
+    const normalizarIndice = useCallback(
+      (indice: number, base: Song[]) => {
+        if (base.length === 0) return 0;
+        if (indice < 0) return 0;
+        if (indice >= base.length) return base.length - 1;
+        return indice;
+      },
+      []
+    );
+
+    const [indiceActual, setIndiceActualState] = useState<number>(() =>
+      normalizarIndice(startIndex, pistasIniciales)
+    );
+    const [reproduciendoInterno, setReproduciendoInterno] = useState(false);
+    const [nombrePlaylist, setNombrePlaylist] = useState<string | undefined>(
+      playlistName
+    );
+    const [randomSongs, setRandomSongsState] = useState<Song[]>([]);
+    const [currentPlaylistId, setCurrentPlaylistIdState] = useState<string | null>(
+      null
+    );
+
+    const setPlaylist = useCallback(
+      (updater: Song[] | ((prev: Song[]) => Song[])) => {
+        setPlaylistState((prev) => {
+          const resultado =
+            typeof updater === "function"
+              ? (updater as (prev: Song[]) => Song[])(prev)
+              : updater;
+          playlistRef.current = resultado;
+          return resultado;
+        });
+      },
+      []
+    );
+
+    const userContext = useContext(UserContext)!;
+    if (!userContext) {
+      console.error("UserContext no está disponible");
+    }
+    const { user } = userContext;
+
+    // 👇 hook de imágenes
+    const {
+      images: fetchedImages,
+      loading: imagesLoading,
+      error: imagesError,
+      fetchImages,
+    } = useImages();
+
+    useEffect(() => {
+      if (playlistRef.current.length === 0 && pistasIniciales.length > 0) {
+        playlistRef.current = pistasIniciales;
+        setPlaylistState(pistasIniciales);
+        setIndiceActualState(normalizarIndice(startIndex, pistasIniciales));
+        setNombrePlaylist((prev) => prev ?? playlistName);
+      }
+    }, [normalizarIndice, pistasIniciales, playlistName, startIndex]);
+
+    useEffect(() => {
+      if (indiceActual >= playlist.length) {
+        setIndiceActualState((prev) =>
+          prev === 0 ? 0 : normalizarIndice(prev, playlist)
+        );
+      }
+    }, [indiceActual, normalizarIndice, playlist]);
+
+    const idsCanciones = useMemo(
+      () => playlist.map((song) => song.youtubeId),
+      [playlist]
+    );
+
+    const currentSong = useMemo(
+      () => playlist[indiceActual] ?? null,
+      [playlist, indiceActual]
+    );
+
+    // 🔥 cuando cambia la canción actual, pedimos imágenes
+  useEffect(() => {
+    if (currentSong?.genre) {
+      const rawGenre = currentSong.genre;
+
+      // Normalizar: primera letra mayúscula, resto minúscula
+      const normalizedGenre =
+        rawGenre.charAt(0).toUpperCase() + rawGenre.slice(1).toLowerCase();
+
+      console.log(
+        "[MusicContext] pidiendo imágenes para genre:",
+        rawGenre,
+        "->",
+        normalizedGenre,
+        "duration:",
+        currentSong.duration
+      );
+
+      fetchImages(normalizedGenre, currentSong.duration ?? 0);
+    } else {
+      console.log("[MusicContext] currentSong sin genre:", currentSong);
+    }
+  }, [currentSong, fetchImages]);
+
+    const urlsImagenes = useMemo(() => {
+      // 1) primero, las del backend (hook)
+      if (fetchedImages.length > 0) {
+        return fetchedImages.map((img) => img.thumbnailUrl ?? img.imageUrl);
+      }
+
+      // 2) luego, miniaturas generadas desde la playlist
+      if (playlist.length > 0) {
+        return playlist.map(generarMiniatura);
+      }
+
+      // 3) fallback: las que vengan por props
+      return images;
+    }, [fetchedImages, playlist, images]);
+
+  const setIndiceActual = useCallback(
+    (indice: number) => {
+      const base = playlistRef.current;
+      const corregido = normalizarIndice(indice, base);
+      setIndiceActualState(corregido);
+    },
+    [normalizarIndice]
+  );
+
+  const setReproduciendo = useCallback((valor: boolean) => {
+    setReproduciendoInterno(valor);
+  }, []);
+
+  const actualizarPlaylistConCancion = useCallback(
+    (song: Song, songsLista: Song[] | undefined, autoPlay?: boolean) => {
+      console.log('🎵 [MusicContext] actualizarPlaylistConCancion llamado');
+      console.log('🎵 [MusicContext] Canción:', song.title);
+      console.log('🎵 [MusicContext] songsLista recibida:', songsLista?.length ?? 'undefined');
+
+      if (songsLista && songsLista.length === 0) {
+        setPlaylist([]);
+        setIndiceActualState(0);
+        if (autoPlay !== undefined) setReproduciendoInterno(autoPlay);
+        return;
+      }
+
+      const objetivo = normalizarCancion(song);
+
+      if (songsLista && songsLista.length > 0) {
+        const normalizados = songsLista.map(normalizarCancion);
+        console.log('🎵 [MusicContext] Canciones normalizadas:', normalizados.length);
+        let indice = normalizados.findIndex((item) =>
+          coincidenCanciones(item, objetivo)
+        );
+        let listaFinal = normalizados;
+        if (indice === -1) {
+          listaFinal = [...normalizados, objetivo];
+          indice = listaFinal.length - 1;
+        }
+        console.log('🎵 [MusicContext] Lista final:', listaFinal.length, 'canciones');
+        console.log('🎵 [MusicContext] Índice seleccionado:', indice);
+        setPlaylist(listaFinal);
+        setIndiceActualState(normalizarIndice(indice, listaFinal));
+        setNombrePlaylist((prev) => prev ?? playlistName);
+      } else {
+        setPlaylist((prev) => {
+          let indice = prev.findIndex((item) =>
+            coincidenCanciones(item, objetivo)
+          );
+          let listaFinal = prev;
+          if (indice === -1) {
+            listaFinal = [...prev, objetivo];
+            indice = listaFinal.length - 1;
+          }
+          setIndiceActualState(normalizarIndice(indice, listaFinal));
+          return listaFinal;
+        });
+      }
+
+      if (autoPlay !== undefined) {
+        setReproduciendoInterno(autoPlay);
+      }
+    },
+    [normalizarIndice, playlistName, setPlaylist]
+  );
+
+  const loadSong = useCallback(
+    (song: Song, songsLista?: Song[]) => {
+      actualizarPlaylistConCancion(song, songsLista, false);
+    },
+    [actualizarPlaylistConCancion]
+  );
+
+  const playSong = useCallback(
+    async (song: Song, songsLista?: Song[]) => {
+      actualizarPlaylistConCancion(song, songsLista, true);
+      if (!user?.id) return;
+
+      try {
+        await fetch("http://localhost:3000/user-history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user: { id: user.id },
+            songId: song.id ?? undefined, // solo si existe en DB
+            youtubeId: song.youtubeId, // siempre presente
+          }),
+        });
+      } catch (err) {
+        console.error("Error al registrar canción en historial:", err);
+      }
+    },
+    [actualizarPlaylistConCancion, user]
+  );
+
+  const setRandomSongs = useCallback((songs: Song[]) => {
+    setRandomSongsState(songs.map(normalizarCancion));
+  }, []);
+
+  const setCurrentPlaylistId = useCallback((id: string | null) => {
+    setCurrentPlaylistIdState(id);
+  }, []);
+
+  // Nueva función: actualizar playlist sin cambiar canción actual
+  const updatePlaylist = useCallback((songs: Song[]) => {
+    const normalizados = songs.map(normalizarCancion);
+
+    setPlaylist(() => {
+      // Buscar el nuevo índice de la canción actual en la lista actualizada
+      if (currentSong) {
+        const nuevoIndice = normalizados.findIndex((item) =>
+          coincidenCanciones(item, currentSong)
+        );
+
+        // Solo actualizar índice si realmente cambió
+        if (nuevoIndice !== -1 && nuevoIndice !== indiceActual) {
+          setIndiceActualState(nuevoIndice);
+        } else if (nuevoIndice === -1) {
+          // Si no encontramos la canción (fue eliminada), setear a 0
+          setIndiceActualState(0);
+        }
+        // Si nuevoIndice === indiceActual, NO hacer nada (no reiniciar)
+      }
+
+      return normalizados;
+    });
+    // NO tocamos reproduciendo - la música sigue igual
+  }, [setPlaylist, currentSong, indiceActual]);
+
+  const value = useMemo<MusicContextValue>(
+    () => ({
+      idsCanciones,
+      indiceActual,
+      setIndiceActual,
+      urlsImagenes,
+      nombrePlaylist,
+      reproduciendo: reproduciendoInterno,
+      setReproduciendo,
+      playlist,
+      currentSong,
+      playSong,
+      loadSong,
+      updatePlaylist,
+      randomSongs,
+      setRandomSongs,
+      currentPlaylistId,
+      setCurrentPlaylistId,
+      imagesLoading,
+      imagesError,
+    }),
+    [
+      currentPlaylistId,
+      currentSong,
+      idsCanciones,
+      indiceActual,
+      loadSong,
+      nombrePlaylist,
+      playlist,
+      playSong,
+      updatePlaylist,
+      randomSongs,
+      reproduciendoInterno,
+      setIndiceActual,
+      setReproduciendo,
+      urlsImagenes,
+      setRandomSongs,
+      setCurrentPlaylistId,
+      imagesLoading,
+      imagesError,
+    ]
+  );
+
+  return <MusicContext.Provider value={value}>{children}</MusicContext.Provider>;
+};
+
+export const useMusicContext = () => {
+  const context = useContext(MusicContext);
+  if (!context) {
+    throw new Error("useMusicContext debe usarse dentro de un MusicProvider");
+  }
+  return context;
+};
+
+export default MusicContext;
