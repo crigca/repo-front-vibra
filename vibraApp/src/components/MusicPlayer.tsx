@@ -66,7 +66,11 @@ export function MusicPlayer() {
   const [volumeBeforeMute, setVolumeBeforeMute] = useState(1);
   const [mostrarVisualizador, setMostrarVisualizador] = useState(false);
   const [indiceImagen, setIndiceImagen] = useState(0);
+  const [indiceAnterior, setIndiceAnterior] = useState<number | null>(null);
   const [mostrarLista, setMostrarLista] = useState(false);
+  const [isImageTransitioning, setIsImageTransitioning] = useState(false);
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
+  const indiceImagenRef = useRef(0);
 
   const titulo = currentSong?.title;
   const artista = currentSong?.artist;
@@ -248,16 +252,40 @@ export function MusicPlayer() {
     return () => window.clearInterval(id);
   }, []);
 
-  // Visualizador (5s)
+  // Sincronizar ref del índice de imagen (evita dependencias costosas)
   useEffect(() => {
-    if (!mostrarVisualizador) return;
-    const id = window.setInterval(() => {
-      setIndiceImagen((p) => (
-        urlsImagenes.length ? (p + 1) % urlsImagenes.length : 0
-      ));
+    indiceImagenRef.current = indiceImagen;
+  }, [indiceImagen]);
+
+  // Visualizador (5s) con animación de entrada/salida
+  useEffect(() => {
+    if (!mostrarVisualizador || urlsImagenes.length === 0) return;
+
+    const intervaloId = window.setInterval(() => {
+      setIndiceAnterior(indiceImagenRef.current);
+      setIsImageTransitioning(true);
+      setIndiceImagen((prev) => {
+        const next = urlsImagenes.length ? (prev + 1) % urlsImagenes.length : 0;
+        indiceImagenRef.current = next;
+        return next;
+      });
+      window.setTimeout(() => setIsImageTransitioning(false), 320);
     }, 5000) as unknown as number;
-    return () => window.clearInterval(id);
+
+    return () => {
+      window.clearInterval(intervaloId);
+      setIsImageTransitioning(false);
+      setIndiceAnterior(null);
+    };
   }, [mostrarVisualizador, urlsImagenes.length]);
+
+  // Al cerrar el visualizador, limpiar estados de transición
+  useEffect(() => {
+    if (!mostrarVisualizador) {
+      setIsImageTransitioning(false);
+      setIndiceAnterior(null);
+    }
+  }, [mostrarVisualizador]);
 
   // Cerrar dropdown al hacer click fuera
   useEffect(() => {
@@ -383,10 +411,20 @@ export function MusicPlayer() {
       {mostrarVisualizador && (
         <div className="Reproductor__VisualizadorOverlay" onClick={() => setMostrarVisualizador(false)} role="dialog" aria-modal="true">
           <div className="Reproductor__VisualizadorContenido" onClick={(e) => e.stopPropagation()}>
-            <div className="Reproductor__VisualizadorSlider">
+            <div className={`Reproductor__VisualizadorSlider ${isImageTransitioning ? "is-animating" : ""}`}>
+              {indiceAnterior !== null && urlsImagenes[indiceAnterior] && (
+                <img
+                  key={`vis-out-${indiceAnterior}-${urlsImagenes[indiceAnterior]}`}
+                  src={urlsImagenes[indiceAnterior]}
+                  alt=""
+                  className="Reproductor__Slide Reproductor__Slide--out"
+                  draggable={false}
+                />
+              )}
+
               {urlsImagenes.length > 0 ? (
                 <img
-                  key={`vis-${indiceImagen}-${urlsImagenes[indiceImagen] || "ph"}`}
+                  key={`vis-in-${indiceImagen}-${urlsImagenes[indiceImagen] || "ph"}`}
                   src={urlsImagenes[indiceImagen] || undefined}
                   alt=""
                   className="Reproductor__Slide Reproductor__Slide--in"
@@ -401,7 +439,48 @@ export function MusicPlayer() {
       )}
 
       {/* Layout principal (conserva clases existentes) */}
-      <div className="Reproductor__ContenedorPrincipal">
+      <div className={`Reproductor__ContenedorPrincipal ${isMobileExpanded ? "is-mobile-expanded" : ""}`}>
+        <div className="Reproductor__MobileBar" onClick={() => setIsMobileExpanded((v) => !v)}>
+          <div className="Reproductor__MobileControls">
+            <div className="Reproductor__MobileTrack">{titulo || "Sin título"}</div>
+            {artista && <div className="Reproductor__MobileArtist">{artista}</div>}
+            <div className="Reproductor__MobileButtons">
+              <button type="button" className="Reproductor__MobileActionButton" onClick={(e) => { e.stopPropagation(); onPrev(); }} aria-label="Anterior">
+                <Icons.Prev />
+              </button>
+              <button type="button" className="Reproductor__MobileActionButton" onClick={(e) => { e.stopPropagation(); onTogglePlay(); }} aria-label={reproduciendo ? "Pausar" : "Reproducir"}>
+                {reproduciendo ? <Icons.Pause /> : <Icons.Play />}
+              </button>
+              <button type="button" className="Reproductor__MobileActionButton" onClick={(e) => { e.stopPropagation(); onNext(); }} aria-label="Siguiente">
+                <Icons.Next />
+              </button>
+            </div>
+          </div>
+          <div className="Reproductor__MobileActions" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="Reproductor__MobileActionButton" onClick={() => setMostrarVisualizador(true)} aria-label="Visualizador IA" title="Visualizador IA">
+              <Icons.Image />
+            </button>
+            <button
+              type="button"
+              className="Reproductor__MobileActionButton"
+              onClick={() => { setIsMobileExpanded(true); setMostrarLista((v) => !v); }}
+              aria-label="Lista de reproducción"
+              aria-expanded={mostrarLista}
+            >
+              <Icons.List />
+            </button>
+            <button
+              type="button"
+              className={`Reproductor__MobileActionButton ${isMobileExpanded ? "is-rotated" : ""}`}
+              onClick={() => setIsMobileExpanded((v) => !v)}
+              aria-label={isMobileExpanded ? "Contraer" : "Expandir"}
+              aria-expanded={isMobileExpanded}
+            >
+              <span aria-hidden="true"><Icons.ChevronDown /></span>
+            </button>
+          </div>
+        </div>
+
         <div className="Reproductor__LayoutDetallado">
           {/* IZQ: portada + info */}
           <nav className="Reproductor__ZonaIzquierda">
