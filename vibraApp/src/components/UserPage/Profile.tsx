@@ -61,7 +61,7 @@ export function Profile() {
   // 🔁 Reutilizable: carga el historial
   const fetchHistory = async (userId: string) => {
     try {
-      const resHistory = await fetch(`http://localhost:3000/user-history/user/${userId}/limited`);
+      const resHistory = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/user-history/user/${userId}/limited`);
       if (!resHistory.ok) throw new Error('Error fetching user history');
       const historyData = await resHistory.json();
       const normalizedHistory = Array.isArray(historyData)
@@ -89,7 +89,7 @@ export function Profile() {
 
     try {
       // 1️⃣ Perfil
-      const resProfile = await fetch(`http://localhost:3000/users/${userId}`, {
+      const resProfile = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/users/${userId}`, {
         credentials: 'include',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
@@ -102,7 +102,7 @@ export function Profile() {
       setIsFollowing(profileData.isFollowing);
 
       // 2️⃣ Verificación de privacidad
-      const resPrivacy = await fetch(`http://localhost:3000/users/${userId}/can-access-history`, {
+      const resPrivacy = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/users/${userId}/can-access-history`, {
         credentials: 'include',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
@@ -166,7 +166,7 @@ export function Profile() {
 
     try {
       showToast('Eliminando canción...', 'loading');
-      await fetch(`http://localhost:3000/user-history/${userId}/${songToDelete.id}`, {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/user-history/${userId}/${songToDelete.id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
@@ -229,8 +229,8 @@ export function Profile() {
       const targetUserId = profile!.id;
       const method = isFollowing ? "DELETE" : "POST";
       const endpoint = isFollowing
-        ? `http://localhost:3000/users/${targetUserId}/unfollow`
-        : `http://localhost:3000/users/${targetUserId}/follow`;
+        ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/users/${targetUserId}/unfollow`
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/users/${targetUserId}/follow`;
 
       const response = await fetch(endpoint, {
         method,

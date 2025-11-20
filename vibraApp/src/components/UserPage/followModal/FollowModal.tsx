@@ -28,7 +28,7 @@ export function FollowModal({isOpen, onClose, type, targetUserId, currentUserId,
         setIsLoading(true);
         setError(null);
         try {
-            const endpoint = `http://localhost:3000/users/${targetUserId}/${type}`;
+            const endpoint = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/users/${targetUserId}/${type}`;
             const response = await fetch(endpoint, {
                 credentials: 'include',
                 headers: {
@@ -56,8 +56,8 @@ export function FollowModal({isOpen, onClose, type, targetUserId, currentUserId,
         try {
             const method = isCurrentlyFollowing ? "DELETE" : "POST";
             const endpoint = isCurrentlyFollowing
-                ? `http://localhost:3000/users/${userId}/unfollow`
-                : `http://localhost:3000/users/${userId}/follow`;
+                ? `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/users/${userId}/unfollow`
+                : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/users/${userId}/follow`;
 
             const response = await fetch(endpoint, {
                 method,

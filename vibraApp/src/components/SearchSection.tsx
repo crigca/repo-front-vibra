@@ -67,7 +67,7 @@ const SearchSection = () => {
         setIsLoadingSuggestions(true);
 
         try {
-          const response = await fetch(`http://localhost:3000/music/autocomplete?query=${encodeURIComponent(value)}&limit=5`);
+          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/music/autocomplete?query=${encodeURIComponent(value)}&limit=5`);
           const data = await response.json();
 
           if (Array.isArray(data) && data.length > 0) {

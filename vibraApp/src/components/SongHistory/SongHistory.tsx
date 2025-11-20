@@ -69,7 +69,7 @@ export function SongHistory() {
 
       const offset = pageNum * ITEMS_PER_PAGE;
       const resHistory = await fetch(
-        `http://localhost:3000/user-history/user/${userId}?limit=${ITEMS_PER_PAGE}&offset=${offset}`,
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/user-history/user/${userId}?limit=${ITEMS_PER_PAGE}&offset=${offset}`,
         {
           credentials: 'include',
           headers: {
@@ -134,7 +134,7 @@ export function SongHistory() {
 
     try {
       showToast('Eliminando canción...', 'loading');
-      await fetch(`http://localhost:3000/user-history/${userId}/${songToDelete.id}`, {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/user-history/${userId}/${songToDelete.id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
