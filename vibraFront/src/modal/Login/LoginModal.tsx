@@ -27,7 +27,7 @@ export function LoginModal({ isOpen, onClose, onOpenRegister}: Props) {
         }
 
         // Redirigir a la app principal
-        window.location.href = 'https://vibra-kohl.vercel.app';
+        window.location.href = 'https://vibra-app-ten.vercel.app/';
     };
 
     const handleError = () => {
