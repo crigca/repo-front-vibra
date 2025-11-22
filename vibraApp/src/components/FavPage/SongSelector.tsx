@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faSearch } from '@fortawesome/free-solid-svg-icons';
 import axios from 'axios';
-import './SongSelector.css';
 import type { Song } from '../../types';
 import { formatGenre } from '../../utils/utilsMusic';
 

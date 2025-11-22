@@ -9,7 +9,6 @@ import {useEffect, useState } from "react";
 import {useSearchContext} from "../hooks/useSearchContext";
 
 /* styles */
-import './search-section.css';
 
 const SearchSection = () => {
   const [valueCurrent, setValueCurrent] = useState("");

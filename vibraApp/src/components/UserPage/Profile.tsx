@@ -1,6 +1,5 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faShare, faTrash, faUser } from '@fortawesome/free-solid-svg-icons';
-import './Profile.css';
 import { useEffect, useState, useContext } from 'react';
 import { ProfileSkeleton } from './ProfileSkeleton';
 import { useParams } from "react-router-dom";

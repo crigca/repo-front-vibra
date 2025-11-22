@@ -5,7 +5,6 @@ import { useMusic } from '../hooks';
 import { useMusicContext } from '../context/MusicContext';
 import type { Song } from '../types';
 import { formatGenre } from '../utils/utilsMusic';
-import '../components/FavPage/Favorites.css';
 
 export function DiscoverMusic() {
   const { songs, loading, error, fetchRandomSongs } = useMusic();

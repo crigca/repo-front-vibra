@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle, faSpinner, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
-import './Toast.css';
 
 export type ToastType = 'success' | 'loading' | 'error';
 

@@ -1,6 +1,5 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlay, faPlus, faTrash, faEdit } from '@fortawesome/free-solid-svg-icons';
-import './Favorites.css';
 import { useEffect, useState, useContext, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PlaylistCover } from './PlaylistCover';

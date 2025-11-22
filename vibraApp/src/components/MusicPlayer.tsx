@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { useMusicContext } from "../context/MusicContext";
-import "./MusicPlayer.css";
 import { Icons } from "./Icons";
 
 type Backend = "cloudinary" | "youtube" | null;
@@ -69,7 +68,6 @@ export function MusicPlayer() {
   const [indiceAnterior, setIndiceAnterior] = useState<number | null>(null);
   const [mostrarLista, setMostrarLista] = useState(false);
   const [isImageTransitioning, setIsImageTransitioning] = useState(false);
-  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const indiceImagenRef = useRef(0);
 
   const titulo = currentSong?.title;
@@ -110,8 +108,6 @@ export function MusicPlayer() {
 
   // Inicializar/montar backend cuando cambia la canción o el backend
   useEffect(() => {
-    let cancel = false;
-
     async function setup() {
       if (!currentSong) return;
 
@@ -213,7 +209,6 @@ export function MusicPlayer() {
     }
 
     setup();
-    return () => { cancel = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backend, currentSong]);
 
@@ -438,49 +433,8 @@ export function MusicPlayer() {
         </div>
       )}
 
-      {/* Layout principal (conserva clases existentes) */}
-      <div className={`Reproductor__ContenedorPrincipal ${isMobileExpanded ? "is-mobile-expanded" : ""}`}>
-        <div className="Reproductor__MobileBar" onClick={() => setIsMobileExpanded((v) => !v)}>
-          <div className="Reproductor__MobileControls">
-            <div className="Reproductor__MobileTrack">{titulo || "Sin título"}</div>
-            {artista && <div className="Reproductor__MobileArtist">{artista}</div>}
-            <div className="Reproductor__MobileButtons">
-              <button type="button" className="Reproductor__MobileActionButton" onClick={(e) => { e.stopPropagation(); onPrev(); }} aria-label="Anterior">
-                <Icons.Prev />
-              </button>
-              <button type="button" className="Reproductor__MobileActionButton" onClick={(e) => { e.stopPropagation(); onTogglePlay(); }} aria-label={reproduciendo ? "Pausar" : "Reproducir"}>
-                {reproduciendo ? <Icons.Pause /> : <Icons.Play />}
-              </button>
-              <button type="button" className="Reproductor__MobileActionButton" onClick={(e) => { e.stopPropagation(); onNext(); }} aria-label="Siguiente">
-                <Icons.Next />
-              </button>
-            </div>
-          </div>
-          <div className="Reproductor__MobileActions" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="Reproductor__MobileActionButton" onClick={() => setMostrarVisualizador(true)} aria-label="Visualizador IA" title="Visualizador IA">
-              <Icons.Image />
-            </button>
-            <button
-              type="button"
-              className="Reproductor__MobileActionButton"
-              onClick={() => { setIsMobileExpanded(true); setMostrarLista((v) => !v); }}
-              aria-label="Lista de reproducción"
-              aria-expanded={mostrarLista}
-            >
-              <Icons.List />
-            </button>
-            <button
-              type="button"
-              className={`Reproductor__MobileActionButton ${isMobileExpanded ? "is-rotated" : ""}`}
-              onClick={() => setIsMobileExpanded((v) => !v)}
-              aria-label={isMobileExpanded ? "Contraer" : "Expandir"}
-              aria-expanded={isMobileExpanded}
-            >
-              <span aria-hidden="true"><Icons.ChevronDown /></span>
-            </button>
-          </div>
-        </div>
-
+      {/* Layout principal */}
+      <div className="Reproductor__ContenedorPrincipal">
         <div className="Reproductor__LayoutDetallado">
           {/* IZQ: portada + info */}
           <nav className="Reproductor__ZonaIzquierda">

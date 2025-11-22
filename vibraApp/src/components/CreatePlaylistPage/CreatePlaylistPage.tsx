@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faTrash, faPlay } from '@fortawesome/free-solid-svg-icons';
-import './CreatePlaylistPage.css';
 import { SongSelector } from '../FavPage/SongSelector';
 import { AlertModal } from '../AlertModal/AlertModal';
 import { useMusicContext } from '../../context/MusicContext';

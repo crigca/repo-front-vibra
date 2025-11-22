@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import './followModal.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser } from '@fortawesome/free-solid-svg-icons';
 

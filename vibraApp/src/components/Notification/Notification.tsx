@@ -2,7 +2,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCheckCircle, faTimesCircle} from "@fortawesome/free-regular-svg-icons"
 import { faExclamationCircle} from "@fortawesome/free-solid-svg-icons"
 import { useEffect, useState } from "react"
-import "./Notification.css"
 
 type NotificationProps={
     type:"success"| "warning" | "error",

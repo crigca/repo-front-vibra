@@ -20,7 +20,6 @@ import { useMusicContext }  from "../context/MusicContext";
 // Removed formatArtist and formatTitle - now showing raw data from DB
 
 /* styles */
-import './FavPage/Favorites.css';
 
 const ResultsSection = () => {
     const {toReproduce, dataFromSearch} = useSearchContext();

@@ -2,7 +2,6 @@ import { useContext, useMemo, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { UserContext } from "../context/currentUserContext";
 import { Icons } from "../components/Icons";
-import "./Sidebar.css";
 
 export function Sidebar() {
   const context = useContext(UserContext);

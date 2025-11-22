@@ -36,14 +36,25 @@
 
   --color-lavender: #e9d5ff;
 
-  /* Fondos */
+  /* === FONDOS CON ESTILO AERO FROSTED GLASS === */
+  
+  /* Base sólida */
   --bg-primary: #1a1a1a;
   --bg-secondary: #242424;
-  --bg-overlay-05: rgba(255, 255, 255, 0.05);
-  --bg-overlay-08: rgba(255, 255, 255, 0.08);
-  --bg-overlay-10: rgba(255, 255, 255, 0.1);
-  --bg-dark-20: rgba(0, 0, 0, 0.2);
-  --bg-dark-40: rgba(0, 0, 0, 0.4);
+  
+  /* Overlays translúcidos con frosted glass */
+  --bg-overlay-05: rgba(17, 18, 26, 0.35);
+  --bg-overlay-08: rgba(17, 18, 26, 0.45);
+  --bg-overlay-10: rgba(17, 18, 26, 0.55);
+  
+  /* Fondos oscuros con efecto frosted glass */
+  --bg-dark-20: rgba(20, 20, 28, 0.4);
+  --bg-dark-40: rgb(17, 18, 26);
+  
+  /* Filtros de backdrop para frosted glass */
+  --backdrop-blur: blur(12px) saturate(120%);
+  --backdrop-blur-weak: blur(8px) saturate(110%);
+  --backdrop-blur-strong: blur(16px) saturate(130%);
 
   /* Textos */
   --text-primary: #ffffff;

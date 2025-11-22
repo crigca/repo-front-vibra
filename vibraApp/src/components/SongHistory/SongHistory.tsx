@@ -7,7 +7,6 @@ import { useMusicContext } from '../../context/MusicContext';
 import { ConfirmModal } from '../ConfirmModal/ConfirmModal';
 import { Toast } from '../Toast/Toast';
 import type { ToastType } from '../Toast/Toast';
-import './SongHistory.css';
 import { NavLink } from 'react-router-dom';
 
 interface Song {
