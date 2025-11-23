@@ -185,26 +185,22 @@ const generarMiniatura = (song: Song) =>
 
     // 🔥 cuando cambia la canción actual, pedimos imágenes
   useEffect(() => {
-    if (currentSong?.genre && currentSong.duration) {
-      const rawGenre = currentSong.genre;
-
-      // Normalizar: primera letra mayúscula, resto minúscula
-      const normalizedGenre =
-         rawGenre.charAt(0).toUpperCase() + rawGenre.slice(1);
+    if (currentSong?.genre) {
+      // El género ya viene en camelCase desde la DB (ej: "heavyMetalArgentino", "cumbia")
+      // NO normalizar - enviarlo tal cual para que coincida con la colección generatedImages
+      const genre = currentSong.genre;
 
       console.log(
         "[MusicContext] pidiendo imágenes para genre:",
-        rawGenre,
-        "->",
-        normalizedGenre,
+        genre,
         "duration:",
         currentSong.duration
       );
 
-      fetchImages(normalizedGenre, currentSong.duration ?? 0);
+      fetchImages(genre, currentSong.duration ?? 0);
     } else {
         console.log("[MusicContext] currentSong sin genre, reseteando imágenes.");
-        resetImages(); 
+        resetImages();
     }
   }, [currentSong, fetchImages]);
 

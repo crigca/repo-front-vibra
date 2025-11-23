@@ -27,15 +27,24 @@ export function useImages() {
     }, []);
 
   const fetchImages = useCallback(async (genre: string, duration: number) => {
+    console.log("[useImages] fetchImages llamado con genre:", genre, "duration:", duration);
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
       const images = await imagesService.getImagesForPlayback(genre, duration);
       console.log(
-        "[useImages] imágenes recibidas (length):",
+        "[useImages] imágenes recibidas para género", genre, ":",
         images.length,
-        images
+        "imágenes"
       );
+      // Log de las primeras 3 imágenes para verificar
+      if (images.length > 0) {
+        console.log("[useImages] Muestra de imágenes:", images.slice(0, 3).map(img => ({
+          generator: img.generator,
+          source: img.source,
+          url: img.imageUrl?.substring(0, 50) + '...'
+        })));
+      }
 
       setState({
         images,
