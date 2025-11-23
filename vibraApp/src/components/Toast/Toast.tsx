@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheckCircle, faSpinner, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
+import { Icons } from '../Icons';
 
 export type ToastType = 'success' | 'loading' | 'error';
 
@@ -28,11 +27,11 @@ export function Toast({ message, type, isVisible, onClose, duration = 3000 }: To
   const getIcon = () => {
     switch (type) {
       case 'success':
-        return <FontAwesomeIcon icon={faCheckCircle} className="toast-icon toast-icon--success" />;
+        return <Icons.CheckCircle className="toast-icon toast-icon--success" />;
       case 'loading':
-        return <FontAwesomeIcon icon={faSpinner} className="toast-icon toast-icon--loading" spin />;
+        return <Icons.Spinner className="toast-icon toast-icon--loading" spin />;
       case 'error':
-        return <FontAwesomeIcon icon={faTimesCircle} className="toast-icon toast-icon--error" />;
+        return <Icons.TimesCircle className="toast-icon toast-icon--error" />;
     }
   };
 

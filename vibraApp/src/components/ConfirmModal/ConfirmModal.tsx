@@ -1,5 +1,4 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
+import { Icons } from '../Icons';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -15,7 +14,7 @@ export function ConfirmModal({ isOpen, message, onConfirm, onCancel }: ConfirmMo
     <div className="confirm-overlay" onClick={onCancel}>
       <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
         <div className="confirm-icon">
-          <FontAwesomeIcon icon={faExclamationTriangle} />
+          <Icons.ExclamationTriangle />
         </div>
         <p className="confirm-message">{message}</p>
         <div className="confirm-buttons">

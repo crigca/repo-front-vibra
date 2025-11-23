@@ -4,8 +4,7 @@
 
 /* Dependencies  */
 import { useEffect, useState } from "react";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlay } from '@fortawesome/free-solid-svg-icons';
+import { Icons } from "./Icons";
 
 /* types */
 import type {ResultProps} from "../types/resultProps";
@@ -77,7 +76,7 @@ const ResultsSection = () => {
                       }}
                     >
                       <div className="playOverlay">
-                        <FontAwesomeIcon icon={faPlay} />
+                        <Icons.Play />
                       </div>
                     </div>
                   </div>
@@ -119,7 +118,7 @@ const ResultsSection = () => {
                           }}
                         >
                           <div className="playOverlay">
-                            <FontAwesomeIcon icon={faPlay} />
+                            <Icons.Play />
                           </div>
                         </div>
                       </div>
