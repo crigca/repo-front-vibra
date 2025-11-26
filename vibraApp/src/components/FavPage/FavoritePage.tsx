@@ -122,7 +122,7 @@ export function Favorites() {
           showToast('Creando playlist...', 'loading');
 
           const songIds = state.selectedSongs.map((song: Song) => song.id);
-          await playlistService.createPlaylistWithSongs(state.playlistName, songIds, userId);
+          await playlistService.createPlaylistWithSongs(state.playlistName, songIds, userId, state.isPublic);
 
           await loadPlaylists();
           showToast('¡Playlist creada exitosamente!', 'success');
@@ -142,7 +142,7 @@ export function Favorites() {
           showToast('Actualizando playlist...', 'loading');
 
           const songIds = state.selectedSongs.map((song: Song) => song.id);
-          await playlistService.updatePlaylistWithSongs(state.editingPlaylistId, state.playlistName, songIds);
+          await playlistService.updatePlaylistWithSongs(state.editingPlaylistId, state.playlistName, songIds, state.isPublic);
 
           await loadPlaylists();
           showToast('¡Playlist actualizada exitosamente!', 'success');
@@ -288,7 +288,7 @@ export function Favorites() {
 
                       {/* Playlists del usuario */}
                       {playlists
-                        .filter(p => !p.isPublic && p.userId === userId)
+                        .filter(p => p.userId === userId)
                         .map((playlist) => {
                           const isPlayingPlaylist = currentPlaylistId === playlist.id && currentSong !== null;
 

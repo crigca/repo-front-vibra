@@ -30,6 +30,8 @@ export function CreatePlaylistPage() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [isGenreMenuOpen, setIsGenreMenuOpen] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
+  const [isVisibilityMenuOpen, setIsVisibilityMenuOpen] = useState(false);
 
   // Scroll al inicio cuando se monta el componente
   useEffect(() => {
@@ -41,6 +43,7 @@ export function CreatePlaylistPage() {
     if (editingPlaylist) {
       setPlaylistName(editingPlaylist.name);
       setSelectedSongs(editingPlaylist.songs || []);
+      setIsPublic(editingPlaylist.isPublic || false);
     }
   }, [editingPlaylist]);
 
@@ -96,7 +99,8 @@ export function CreatePlaylistPage() {
         action: editingPlaylist ? 'edit' : 'create',
         playlistName,
         selectedSongs: songsToSave,
-        editingPlaylistId: editingPlaylist?.id
+        editingPlaylistId: editingPlaylist?.id,
+        isPublic
       }
     });
   }, [playlistName, selectedSongs, editingPlaylist, navigate, showAlert]);
@@ -169,7 +173,31 @@ export function CreatePlaylistPage() {
               onChange={(e) => setPlaylistName(e.target.value)}
               maxLength={30}
             />
-
+            <button
+              className="visibility-header"
+              onClick={() => setIsVisibilityMenuOpen(!isVisibilityMenuOpen)}
+            >
+              <span className="visibility-label">
+                Visibilidad: {isPublic ? 'Pública' : 'Privada'}
+              </span>
+              <span className={`visibility-arrow ${isVisibilityMenuOpen ? 'open' : ''}`}>▼</span>
+            </button>
+            {isVisibilityMenuOpen && (
+              <div className="visibility-container">
+                <button
+                  className="visibility-option"
+                  onClick={() => { setIsPublic(true); setIsVisibilityMenuOpen(false); }}
+                >
+                  Pública
+                </button>
+                <button
+                  className="visibility-option"
+                  onClick={() => { setIsPublic(false); setIsVisibilityMenuOpen(false); }}
+                >
+                  Privada
+                </button>
+              </div>
+            )}
             <input
               type="text"
               className="playlist-search-input"
