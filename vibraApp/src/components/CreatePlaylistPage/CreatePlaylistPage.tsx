@@ -29,7 +29,6 @@ export function CreatePlaylistPage() {
   const [isGenreMenuOpen, setIsGenreMenuOpen] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
-  const [isVisibilityMenuOpen, setIsVisibilityMenuOpen] = useState(false);
 
   // Scroll al inicio cuando se monta el componente
   useEffect(() => {
@@ -171,31 +170,15 @@ export function CreatePlaylistPage() {
               onChange={(e) => setPlaylistName(e.target.value)}
               maxLength={30}
             />
-            <button
-              className="visibility-header"
-              onClick={() => setIsVisibilityMenuOpen(!isVisibilityMenuOpen)}
+            <select
+              className="playlist-visibility-select"
+              value={isPublic ? 'public' : 'private'}
+              onChange={(e) => setIsPublic(e.target.value === 'public')}
             >
-              <span className="visibility-label">
-                Visibilidad: {isPublic ? 'Pública' : 'Privada'}
-              </span>
-              <span className={`visibility-arrow ${isVisibilityMenuOpen ? 'open' : ''}`}>▼</span>
-            </button>
-            {isVisibilityMenuOpen && (
-              <div className="visibility-container">
-                <button
-                  className="visibility-option"
-                  onClick={() => { setIsPublic(true); setIsVisibilityMenuOpen(false); }}
-                >
-                  Pública
-                </button>
-                <button
-                  className="visibility-option"
-                  onClick={() => { setIsPublic(false); setIsVisibilityMenuOpen(false); }}
-                >
-                  Privada
-                </button>
-              </div>
-            )}
+              <option value="public">Pública</option>
+              <option value="private">Privada</option>
+            </select>
+            
             <input
               type="text"
               className="playlist-search-input"
