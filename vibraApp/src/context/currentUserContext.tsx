@@ -1,5 +1,5 @@
 // src/context/UserContext.tsx
-import { createContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useEffect, useState, useRef, useCallback, type ReactNode } from "react";
 
 // Estructura del usuario
 export interface User {
@@ -25,9 +25,67 @@ interface UserProviderProps {
   children: ReactNode;
 }
 
+// Tiempo de inactividad en milisegundos (60 minutos)
+const INACTIVITY_TIMEOUT = 60 * 60 * 1000;
+
 // Provider del usuario
 export const UserProvider = ({ children }: UserProviderProps) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
+  const checkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Función de logout
+  const handleInactivityLogout = useCallback(async () => {
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
+      await fetch(`${backendUrl}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (err) {
+      console.error('Error en logout por inactividad:', err);
+    }
+    // Limpiar cookie y redirigir
+    document.cookie = 'token_vibra=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    window.location.href = 'https://vibra-front-vercel.vercel.app';
+  }, []);
+
+  // Actualizar última actividad
+  const updateActivity = useCallback(() => {
+    lastActivityRef.current = Date.now();
+  }, []);
+
+  // Verificar inactividad
+  useEffect(() => {
+    if (!currentUser) return;
+
+    // Eventos de actividad del usuario
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+
+    events.forEach(event => {
+      window.addEventListener(event, updateActivity, { passive: true });
+    });
+
+    // Verificar cada minuto si hay inactividad
+    checkIntervalRef.current = setInterval(() => {
+      const now = Date.now();
+      const timeSinceLastActivity = now - lastActivityRef.current;
+
+      if (timeSinceLastActivity >= INACTIVITY_TIMEOUT) {
+        console.log('⏰ Sesión cerrada por inactividad (60 min)');
+        handleInactivityLogout();
+      }
+    }, 60 * 1000); // Verificar cada minuto
+
+    return () => {
+      events.forEach(event => {
+        window.removeEventListener(event, updateActivity);
+      });
+      if (checkIntervalRef.current) {
+        clearInterval(checkIntervalRef.current);
+      }
+    };
+  }, [currentUser, updateActivity, handleInactivityLogout]);
 
   useEffect(() => {
     const controller = new AbortController();

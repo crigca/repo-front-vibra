@@ -257,6 +257,23 @@ export function Profile() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:3000';
+      await fetch(`${backendUrl}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      // Limpiar cookie local
+      document.cookie = 'token_vibra=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      // Redirigir a la landing
+      window.location.href = 'https://vibra-front-vercel.vercel.app';
+    } catch (err) {
+      console.error('Error al cerrar sesión:', err);
+      showToast('Error al cerrar sesión', 'error');
+    }
+  };
+
   if (isLoading) return <ProfileSkeleton />;
   if (!profile) return <p>Perfil no encontrado.</p>;
 
@@ -294,6 +311,15 @@ export function Profile() {
             <button className="actionBtn shareBtn" onClick={handleShare}>
               <Icons.Share />
             </button>
+            {isOwnProfile && (
+              <button
+                className="actionBtn"
+                style={{ backgroundColor: '#e53935', color: 'white' }}
+                onClick={handleLogout}
+              >
+                Cerrar Sesión
+              </button>
+            )}
           </div>
 
           <div className="followStats">
