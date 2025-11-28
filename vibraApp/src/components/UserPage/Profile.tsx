@@ -267,7 +267,7 @@ export function Profile() {
       // Limpiar cookie local
       document.cookie = 'token_vibra=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       // Redirigir a la landing
-      window.location.href = 'https://vibra-front-vercel.vercel.app';
+      window.location.href = 'https://vibra-kohl.vercel.app/';
     } catch (err) {
       console.error('Error al cerrar sesión:', err);
       showToast('Error al cerrar sesión', 'error');

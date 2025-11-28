@@ -47,7 +47,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     }
     // Limpiar cookie y redirigir
     document.cookie = 'token_vibra=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    window.location.href = 'https://vibra-front-vercel.vercel.app';
+    window.location.href = 'https://vibra-kohl.vercel.app/';
   }, []);
 
   // Actualizar última actividad
