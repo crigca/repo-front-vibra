@@ -1,12 +1,14 @@
-# 🎵 VIBRA - Frontend
+# VIBRA - Frontend
 
 Plataforma de música con descubrimiento inteligente, gestión de playlists y reproductor integrado.
+Este repositorio cuenta con una wiki donde se detalla toda su documentacion en: https://deepwiki.com/crigca/repo-front-vibra
+Asimismo, este proyecto cuenta con un informe tecnico: https://docs.google.com/document/d/1__hA0XD2aFfMkWAgLew-wv83zOdFjg64Gf1wZH8nOQQ/edit?usp=drive_link
 
-**🌐 Producción:** https://vibra-kohl.vercel.app
+** Link al proyecto en producción:** https://vibra-kohl.vercel.app
 
 ---
 
-## 📁 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 front/
@@ -25,7 +27,7 @@ front/
 
 ---
 
-## 🚀 Stack Tecnológico
+## Stack Tecnológico
 
 ### **vibraApp (Aplicación Principal)**
 - **React 19** + **TypeScript 5**
@@ -45,7 +47,7 @@ front/
 
 ---
 
-## 🛠️ Instalación y Setup
+## Instalación y Setup
 
 ### **Prerequisitos**
 - Node.js 18+
@@ -97,7 +99,7 @@ npm run dev
 
 ---
 
-## 🔐 Flujo de Autenticación
+## Flujo de Autenticación
 
 VIBRA soporta **dos métodos de autenticación**:
 
@@ -129,7 +131,7 @@ VIBRA soporta **dos métodos de autenticación**:
 
 ---
 
-## 🎵 Funcionalidades Principales
+## Funcionalidades Principales
 
 ### **1. Descubrimiento de Música por Géneros**
 
@@ -166,7 +168,7 @@ Sistema híbrido:
 
 ---
 
-## 🌐 Integración con Backend
+## Integración con Backend
 
 ### **Endpoints Utilizados**
 
@@ -198,7 +200,7 @@ GET  /auth/me
 
 ---
 
-## 🏗️ Build para Producción
+## Build para Producción
 
 ```bash
 # Landing Page
@@ -216,7 +218,7 @@ Deploy automático en **Vercel** al hacer push a main.
 
 ---
 
-## 👥 Autores
+## Autores
 
 - Sergio Peckerle
 - Diego Ortino
