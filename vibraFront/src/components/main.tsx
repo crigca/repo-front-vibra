@@ -13,9 +13,9 @@ export function Main(){
             <Route path="/" element={<Home/>}/>
             <Route path="/vibra" element={<Vibra/>} />
             <Route path="/how" element={<How/>}/>
-            <Route path="contact" element={<Contact/>}/>
-            <Route path="login" element={<Login/>}/>
-            <Route path="reset-password" element={<ResetPassword/>}/>
+            <Route path="/contact" element={<Contact/>}/>
+            <Route path="/login" element={<Login/>}/>
+            <Route path="/reset-password" element={<ResetPassword/>}/>
         </Routes>
     )
 }

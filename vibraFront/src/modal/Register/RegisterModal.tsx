@@ -11,6 +11,7 @@ type Props = {
 type Step = 'register' | 'verify';
 
 export function RegisterModal({ isOpen, onClose,onOpenLogin }: Props) {
+    const appUrl = import.meta.env.VITE_APP_URL || 'https://vibra-app-ten.vercel.app';
     const [step, setStep] = useState<Step>('register');
     const [isLoading, setIsLoading] = useState(false);
     const [username, setUsername] = useState('');
@@ -66,7 +67,6 @@ export function RegisterModal({ isOpen, onClose,onOpenLogin }: Props) {
             }
 
         } catch (err) {
-            console.error('❌ Error en registro:', err);
             setError(err instanceof Error ? err.message : 'Error al registrarse');
         } finally {
             setIsLoading(false);
@@ -105,11 +105,10 @@ export function RegisterModal({ isOpen, onClose,onOpenLogin }: Props) {
             // Verificación exitosa, redirigir a la app
             setSuccess('Email verificado correctamente');
             setTimeout(() => {
-                window.location.href = `https://vibra-app-ten.vercel.app/?token=${data.token}`;
+                window.location.href = `${appUrl}/?token=${data.token}`;
             }, 1500);
 
         } catch (err) {
-            console.error('❌ Error en verificación:', err);
             setError(err instanceof Error ? err.message : 'Error al verificar');
             setIsLoading(false);
         }
@@ -167,17 +166,15 @@ export function RegisterModal({ isOpen, onClose,onOpenLogin }: Props) {
             const remaining = Math.max(0, 3000 - elapsed);
 
             setTimeout(() => {
-                window.location.href = `https://vibra-app-ten.vercel.app/?token=${data.token}`;
+                window.location.href = `${appUrl}/?token=${data.token}`;
             }, remaining);
 
         } catch (err) {
-            console.error('❌ Error en registro con Google:', err);
             setIsLoading(false);
         }
     };
 
     const handleError = () => {
-        console.log('Login Failed');
         setIsLoading(false);
     };
 

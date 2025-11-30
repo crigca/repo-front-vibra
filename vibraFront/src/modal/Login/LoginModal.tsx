@@ -11,6 +11,7 @@ type Props = {
 type Step = 'login' | 'forgotPassword' | 'forgotSuccess' | 'verifyEmail';
 
 export function LoginModal({ isOpen, onClose, onOpenRegister}: Props) {
+    const appUrl = import.meta.env.VITE_APP_URL || 'https://vibra-app-ten.vercel.app';
     const [step, setStep] = useState<Step>('login');
     const [isLoading, setIsLoading] = useState(false);
     const [email, setEmail] = useState('');
@@ -61,11 +62,10 @@ export function LoginModal({ isOpen, onClose, onOpenRegister}: Props) {
             const remaining = Math.max(0, 3000 - elapsed);
 
             setTimeout(() => {
-                window.location.href = `https://vibra-app-ten.vercel.app/?token=${data.token}`;
+                window.location.href = `${appUrl}/?token=${data.token}`;
             }, remaining);
 
         } catch (err) {
-            console.error('❌ Error en login:', err);
             setError(err instanceof Error ? err.message : 'Error al iniciar sesión');
             setIsLoading(false);
         }
@@ -102,11 +102,10 @@ export function LoginModal({ isOpen, onClose, onOpenRegister}: Props) {
 
             setSuccess('Email verificado correctamente');
             setTimeout(() => {
-                window.location.href = `https://vibra-app-ten.vercel.app/?token=${data.token}`;
+                window.location.href = `${appUrl}/?token=${data.token}`;
             }, 1500);
 
         } catch (err) {
-            console.error('❌ Error en verificación:', err);
             setError(err instanceof Error ? err.message : 'Error al verificar');
             setIsLoading(false);
         }
@@ -196,17 +195,15 @@ export function LoginModal({ isOpen, onClose, onOpenRegister}: Props) {
             const remaining = Math.max(0, 3000 - elapsed);
 
             setTimeout(() => {
-                window.location.href = `https://vibra-app-ten.vercel.app/?token=${data.token}`;
+                window.location.href = `${appUrl}/?token=${data.token}`;
             }, remaining);
 
         } catch (error) {
-            console.error('❌ Error en login:', error);
             setIsLoading(false);
         }
     };
 
     const handleError = () => {
-        console.log('Login Failed');
         setIsLoading(false);
     };
 
