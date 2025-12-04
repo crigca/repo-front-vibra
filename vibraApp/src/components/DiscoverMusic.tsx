@@ -99,14 +99,6 @@ export function DiscoverMusic() {
                     <span className="cardStats">
                       {formatGenre(song.genre)} • {Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}
                     </span>
-                    <button
-                      className="likeButton"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <Icons.Heart />
-                    </button>
                   </div>
                 </div>
               </div>

@@ -41,7 +41,7 @@ window.fetch = async (input, init = {}) => {
   // Si el backend responde 401, se interpreta token inválido o expirado
   if (response.status === 401) {
     console.warn('Token inválido o expirado, cerrando sesión...');
-    window.location.href = 'http://localhost:5173/';
+    window.location.href = 'https://vibra-kohl.vercel.app/';
     throw new Error('Unauthorized');
   }
 
