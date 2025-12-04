@@ -4613,9 +4613,7 @@ overflow: hidden;
   }
 
   .playerRightPanel {
-    width: 100%;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    display: none;
   }
 
   .playerVolumeSlider {
