@@ -18,6 +18,8 @@ interface Song {
   viewCount?: number;
   publishedAt?: Date;
   cloudinaryUrl?: string;
+  storage_url?: string;
+  storage_provider?: string;
   createdAt: Date;
   updatedAt: Date;
 }

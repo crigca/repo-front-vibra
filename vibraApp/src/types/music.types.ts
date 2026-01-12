@@ -18,7 +18,9 @@ export interface Song {
   genre?: string;                // Género musical (opcional)
   viewCount?: number;            // Número de reproducciones (opcional)
   publishedAt?: string | Date;  // Fecha de publicación (opcional)
-  cloudinaryUrl?: string;        // URL del audio en Cloudinary
+  cloudinaryUrl?: string;        // URL del audio en Cloudinary (legacy)
+  storage_url?: string;          // URL del audio en Tebi/R2
+  storage_provider?: string;     // 'tebi' | 'r2' | null
   createdAt?: string | Date;     // Fecha de creación en BD
   updatedAt?: string | Date;     // Fecha de última actualización
 }
