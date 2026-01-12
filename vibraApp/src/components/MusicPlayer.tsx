@@ -139,10 +139,11 @@ export function MusicPlayer() {
   }, [currentSong, setIsPlaying]);
 
   // Decides which backend to use for the current track.
+  // Solo Tebi/R2 storage o YouTube (no Cloudinary para audio)
   const backend: Backend = useMemo(() => {
     if (!currentSong) return null;
     if (manualBackendOverride) return manualBackendOverride;
-    return currentSong.cloudinaryUrl ? "cloudinary" : currentSong.youtubeId ? "youtube" : null;
+    return currentSong.storage_url ? "cloudinary" : currentSong.youtubeId ? "youtube" : null;
   }, [currentSong, manualBackendOverride]);
 
   // Navigates to the previous track in a circular list.
@@ -253,7 +254,8 @@ export function MusicPlayer() {
 
         audio.preload = "auto";
         audio.crossOrigin = "anonymous";
-        if (currentSong.cloudinaryUrl) audio.src = currentSong.cloudinaryUrl;
+        // Solo Tebi/R2 storage (no Cloudinary para audio)
+        if (currentSong.storage_url) audio.src = currentSong.storage_url;
 
         audio.onerror = () => {
           if (manualBackendOverride !== "youtube") fallbackToYouTube();

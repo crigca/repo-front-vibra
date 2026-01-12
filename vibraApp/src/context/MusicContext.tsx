@@ -75,6 +75,8 @@ const normalizarTrack = (track: Track, index: number): Song => ({
   viewCount: track.viewCount,
   publishedAt: track.publishedAt,
   cloudinaryUrl: track.cloudinaryUrl,
+  storage_url: track.storage_url,
+  storage_provider: track.storage_provider,
   createdAt: track.createdAt,
   updatedAt: track.updatedAt,
 });
@@ -100,7 +102,7 @@ const coincidenCanciones = (a: Song, b: Song) => {
 };
 
 const generarMiniatura = (song: Song) =>
-  song.cloudinaryUrl ?? `https://img.youtube.com/vi/${song.youtubeId}/hqdefault.jpg`;
+  `https://img.youtube.com/vi/${song.youtubeId}/hqdefault.jpg`;
 
 /* ──────────────────────────────────────────────────────────────
  *  Provider
